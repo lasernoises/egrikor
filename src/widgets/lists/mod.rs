@@ -15,11 +15,11 @@ macro_rules! ft_list_content {
     };
 }
 
-pub trait WidgetHandler<C: Debug> {
-    fn widget<W: Widget<C>>(&mut self, widget: &mut W, expand: bool);
+pub trait WidgetHandler {
+    fn widget<W: Widget>(&mut self, widget: &mut W, expand: bool);
 }
 
-pub trait ListContent<C: Debug> {
+pub trait ListContent {
     type Widgets: ListContentWidgets<C>;
 
     fn then<O: ListContent<C>>(self, other: O) -> Then<Self, O>
@@ -34,7 +34,7 @@ pub trait ListContent<C: Debug> {
     fn update(self, widgets: &mut Self::Widgets);
 }
 
-// impl<C: Debug, E: Element<C>> ListContent<C> for E {
+// impl<E: WidgetParams> ListContent<C> for E {
 //     type Widgets = ListItemWidgets<C, E::Widget>;
 
 //     fn build(self) -> Self::Widgets {
@@ -49,14 +49,14 @@ pub trait ListContent<C: Debug> {
 //     }
 // }
 
-pub fn expand<C: Debug, E: Element<C>>(element: E) -> ListItem<E> {
+pub fn expand<E: WidgetParams>(element: E) -> ListItem<E> {
     ListItem {
         element,
         expand: true,
     }
 }
 
-pub trait ListContentWidgets<C: Debug> {
+pub trait ListContentWidgets {
     fn all<H: WidgetHandler<C>>(&mut self, handler: &mut H);
 }
 
@@ -64,7 +64,7 @@ pub struct EmptyListContent;
 
 pub struct EmptyListContentWidgets;
 
-impl<C: Debug> ListContent<C> for EmptyListContent {
+impl ListContent<C> for EmptyListContent {
     type Widgets = EmptyListContentWidgets;
 
     fn build(self) -> Self::Widgets {
@@ -74,7 +74,7 @@ impl<C: Debug> ListContent<C> for EmptyListContent {
     fn update(self, _: &mut Self::Widgets) {}
 }
 
-impl<C: Debug> ListContentWidgets<C> for EmptyListContentWidgets {
+impl ListContentWidgets<C> for EmptyListContentWidgets {
     fn all<H: WidgetHandler<C>>(&mut self, _: &mut H) {}
 }
 
@@ -83,7 +83,7 @@ pub struct ListItem<E> {
     expand: bool,
 }
 
-pub fn item<C: Debug, E: Element<C>>(element: E, expand: bool) -> ListItem<E> {
+pub fn item<E: WidgetParams>(element: E, expand: bool) -> ListItem<E> {
     ListItem { element, expand }
 }
 
@@ -92,13 +92,13 @@ pub struct ListItemWidgets<W> {
     expand: bool,
 }
 
-impl<C: Debug, W: Widget<C>> ListContentWidgets<C> for ListItemWidgets<W> {
+impl<C: Debug, W: Widget> ListContentWidgets<C> for ListItemWidgets<W> {
     fn all<H: WidgetHandler<C>>(&mut self, handler: &mut H) {
         handler.widget(&mut self.widget, self.expand);
     }
 }
 
-impl<C: Debug, E: Element<C>> ListContent<C> for ListItem<E> {
+impl<E: WidgetParams> ListContent<C> for ListItem<E> {
     type Widgets = ListItemWidgets<E::Widget>;
 
     fn build(self) -> Self::Widgets {
@@ -153,13 +153,13 @@ pub struct IterListContent<E, I: Iterator<Item = (E, bool)>> {
     iter: I,
 }
 
-pub fn iter<C: Debug, E: Element<C>, I: Iterator<Item = (E, bool)>>(
+pub fn iter<E: WidgetParams, I: Iterator<Item = (E, bool)>>(
     iter: I,
 ) -> IterListContent<E, I> {
     IterListContent { iter }
 }
 
-impl<C: Debug, E: Element<C>, I: Iterator<Item = (E, bool)>> ListContent<C>
+impl<E: WidgetParams, I: Iterator<Item = (E, bool)>> ListContent<C>
     for IterListContent<E, I>
 {
     type Widgets = IterListContentWidgets<E::Widget>;
@@ -203,7 +203,7 @@ pub struct IterListContentWidgets<W> {
     widgets: Vec<(W, bool)>,
 }
 
-impl<C: Debug, W: Widget<C>> ListContentWidgets<C> for IterListContentWidgets<W> {
+impl<C: Debug, W: Widget> ListContentWidgets<C> for IterListContentWidgets<W> {
     fn all<H: WidgetHandler<C>>(&mut self, handler: &mut H) {
         for (widget, expand) in &mut self.widgets {
             handler.widget(widget, *expand);

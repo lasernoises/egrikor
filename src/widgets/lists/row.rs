@@ -13,7 +13,7 @@ macro_rules! ft_row {
     }}
 }
 
-pub fn row<C: Debug, D: ListContent<C>>(content: D) -> impl Element<C> {
+pub fn row<C: Debug, D: ListContent<C>>(content: D) -> impl WidgetParams {
     Row { content }
 }
 
@@ -21,7 +21,7 @@ pub struct Row<D> {
     content: D,
 }
 
-impl<C: Debug, D: ListContent<C>> Element<C> for Row<D> {
+impl<C: Debug, D: ListContent<C>> WidgetParams for Row<D> {
     type Widget = RowWidget<D::Widgets>;
 
     fn build(self) -> Self::Widget {
@@ -53,7 +53,7 @@ pub struct RowWidget<W> {
     extra_layers: u8,
 }
 
-impl<C: Debug, W: ListContentWidgets<C>> Widget<C> for RowWidget<W> {
+impl<C: Debug, W: ListContentWidgets<C>> Widget for RowWidget<W> {
     type Event = ();
 
     fn measure(
@@ -74,7 +74,7 @@ impl<C: Debug, W: ListContentWidgets<C>> Widget<C> for RowWidget<W> {
         }
 
         impl<'a, 'b, C: Debug> WidgetHandler<C> for MeasureHandler<'a, 'b, C> {
-            fn widget<W: Widget<C>>(&mut self, widget: &mut W, expand: bool) {
+            fn widget<W: Widget>(&mut self, widget: &mut W, expand: bool) {
                 if expand {
                     self.expand_count += 1;
                 } else {
@@ -121,7 +121,7 @@ impl<C: Debug, W: ListContentWidgets<C>> Widget<C> for RowWidget<W> {
         }
 
         impl<'a, 'b, C: Debug> WidgetHandler<C> for MeasureExpandHandler<'a, 'b, C> {
-            fn widget<W: Widget<C>>(&mut self, widget: &mut W, expand: bool) {
+            fn widget<W: Widget>(&mut self, widget: &mut W, expand: bool) {
                 if expand {
                     let widget_size =
                         widget.measure(*self.constraint, self.renderer, self.theme, self.context);
@@ -199,7 +199,7 @@ impl<C: Debug, W: ListContentWidgets<C>> Widget<C> for RowWidget<W> {
         }
 
         impl<'a, 'b, C: Debug> WidgetHandler<C> for RenderHandler<'a, 'b, C> {
-            fn widget<W: Widget<C>>(&mut self, widget: &mut W, expand: bool) {
+            fn widget<W: Widget>(&mut self, widget: &mut W, expand: bool) {
                 let widget_width = if expand {
                     self.expand_width
                 } else {
@@ -281,7 +281,7 @@ impl<C: Debug, W: ListContentWidgets<C>> Widget<C> for RowWidget<W> {
         }
 
         impl<'a, C: Debug> WidgetHandler<C> for CursorInputHandler<'a, C> {
-            fn widget<W: Widget<C>>(&mut self, widget: &mut W, expand: bool) {
+            fn widget<W: Widget>(&mut self, widget: &mut W, expand: bool) {
                 let widget_width = if expand {
                     self.expand_width
                 } else {
@@ -361,7 +361,7 @@ impl<C: Debug, W: ListContentWidgets<C>> Widget<C> for RowWidget<W> {
         }
 
         impl<'a, C: Debug> WidgetHandler<C> for KeyboardInputHandler<'a, C> {
-            fn widget<W: Widget<C>>(&mut self, widget: &mut W, expand: bool) {
+            fn widget<W: Widget>(&mut self, widget: &mut W, expand: bool) {
                 let widget_width = if expand {
                     self.expand_width
                 } else {

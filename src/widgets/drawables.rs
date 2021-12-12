@@ -6,44 +6,51 @@ use druid_shell::piet::{Color, Text, TextLayout, TextLayoutBuilder};
 use piet_common::Piet;
 use piet_common::RenderContext;
 
-pub fn text_elem<C: Debug>(text: &'static str) -> impl Element<C> {
-    struct TextElem(&'static str);
-
-    impl<C: Debug> Element<C> for TextElem {
-        type Widget = TextWidget;
-
-        fn build(self) -> TextWidget {
-            TextWidget {
-                variant: WidgetVariant::Normal,
-                text: self.0,
-                layout: Size::ZERO,
-            }
-        }
-
-        fn update(self, widget: &mut TextWidget) {
-            widget.text = self.0;
-        }
-    }
-
+pub fn text_elem(text: &'static str) -> impl WidgetParams<'static> {
     TextElem(text)
+}
+
+struct TextElem(&'static str);
+
+impl WidgetParams for TextElem {
+    type Widget = TextElem;
+
 }
 
 pub struct TextWidget {
     pub variant: WidgetVariant,
-    pub text: &'static str,
+    // pub text: &'static str,
     pub layout: Size,
 }
 
-impl<C: Debug> Widget<C> for TextWidget {
+impl Widget for TextWidget {
+    type Params = TextElem;
     type Event = ();
 
-    fn measure(
-        &mut self,
-        max_size: [Option<f64>; 2],
+    fn build(
+        self,
+        constraint: LayoutConstraint,
         renderer: &mut Piet,
         theme: &Theme,
-        _: &mut C,
-    ) -> Size {
+    ) -> TextWidget {
+        let mut widget = TextWidget {
+            variant: WidgetVariant::Normal,
+            // text: self.0,
+            layout: Size::ZERO,
+        };
+        self.update(constraint, renderer, theme, &mut widget);
+        widget
+    }
+
+    fn update(
+        &mut self,
+        params: &mut Self::Params,
+        constraint: LayoutConstraint,
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) {
+        self.text = self.0;
+
         let theme = theme.text.get(self.variant, true);
 
         let text_factory = renderer.text();
@@ -59,20 +66,55 @@ impl<C: Debug> Widget<C> for TextWidget {
         let min_height: f64 = layout_size.height;
 
         self.layout = Size::new(
-            if let Some(max_width) = max_size[0] {
+            if let Some(max_width) = constraint[0] {
                 min_width.max(max_width)
             } else {
                 min_width
             },
-            if let Some(max_height) = max_size[1] {
+            if let Some(max_height) = constraint[1] {
                 min_height.max(max_height)
             } else {
                 min_height
             },
         );
-
-        self.layout
     }
+
+    // fn measure(
+    //     &mut self,
+    //     max_size: [Option<f64>; 2],
+    //     renderer: &mut Piet,
+    //     theme: &Theme,
+    //     _: &mut C,
+    // ) -> Size {
+    //     let theme = theme.text.get(self.variant, true);
+
+    //     let text_factory = renderer.text();
+    //     let font = text_factory.font_family(theme.font).unwrap();
+    //     let layout = text_factory
+    //         .new_text_layout(self.text)
+    //         .font(font, theme.size as f64)
+    //         .build()
+    //         .unwrap();
+
+    //     let layout_size = layout.size();
+    //     let min_width: f64 = layout_size.width;
+    //     let min_height: f64 = layout_size.height;
+
+    //     self.layout = Size::new(
+    //         if let Some(max_width) = max_size[0] {
+    //             min_width.max(max_width)
+    //         } else {
+    //             min_width
+    //         },
+    //         if let Some(max_height) = max_size[1] {
+    //             min_height.max(max_height)
+    //         } else {
+    //             min_height
+    //         },
+    //     );
+
+    //     self.layout
+    // }
 
     fn min_size(&self) -> Size {
         self.layout
@@ -90,7 +132,6 @@ impl<C: Debug> Widget<C> for TextWidget {
         _: &InputState,
         _: u8,
         _: bool,
-        _: &mut C,
     ) {
         let theme = theme.text.get(self.variant, true);
 
@@ -118,40 +159,50 @@ impl<C: Debug> Widget<C> for TextWidget {
     }
 }
 
-pub fn checkmark_elem<C: Debug>(size: Size) -> impl Element<C> {
-    struct Elem(Size);
-
-    impl<C: Debug> Element<C> for Elem {
-        type Widget = Checkmark;
-
-        fn build(self) -> Checkmark {
-            Checkmark(self.0)
-        }
-
-        fn update(self, widget: &mut Checkmark) {
-            widget.0 = self.0;
-        }
-    }
-
-    Elem(size)
+pub fn checkmark_elem(size: Size) -> impl WidgetParams<'static> {
+    CheckmarkElem(size)
 }
 
-pub struct Checkmark(pub Size);
+struct CheckmarkElem(Size);
+
+impl WidgetParams for CheckmarkElem {
+    type Widget = Checkmark;
+}
+
+pub struct Checkmark();
 
 /// Much like the [FixedRect] the [Checkmark] also only has a fixed size, but it also renders a
 /// checkmark (as the name suggests).
-impl<C: Debug> Widget<C> for Checkmark {
+impl Widget for Checkmark {
+    type Params = CheckmarkElem;
     type Event = ();
 
-    fn measure(
-        &mut self,
-        _max_size: [Option<f64>; 2],
-        _renderer: &mut Piet,
-        _theme: &Theme,
-        _: &mut C,
-    ) -> Size {
-        self.0
+    fn build(
+        params: &mut Self::Params,
+        constraint: LayoutConstraint,
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) -> Self {
+        Checkmark()
     }
+
+    fn update(
+        &mut self,
+        params: &mut Self::Params,
+        constraint: LayoutConstraint,
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) {}
+
+    // fn measure(
+    //     &mut self,
+    //     _max_size: [Option<f64>; 2],
+    //     _renderer: &mut Piet,
+    //     _theme: &Theme,
+    //     _: &mut C,
+    // ) -> Size {
+    //     self.0
+    // }
 
     // This will always be called after measure.
     fn min_size(&self) -> Size {
@@ -175,7 +226,6 @@ impl<C: Debug> Widget<C> for Checkmark {
         _: &InputState,
         _: u8,
         _: bool,
-        _: &mut C,
     ) {
         let rect = Rect::from_center_size(rect.center(), self.0).inset(4.);
 
@@ -191,39 +241,40 @@ impl<C: Debug> Widget<C> for Checkmark {
     }
 }
 
-pub fn fixed_rect_elem<C: Debug>(size: Size) -> impl Element<C> {
-    struct Elem(Size);
-
-    impl<C: Debug> Element<C> for Elem {
-        type Widget = FixedRect;
-
-        fn build(self) -> FixedRect {
-            FixedRect(self.0)
-        }
-
-        fn update(self, widget: &mut FixedRect) {
-            widget.0 = self.0;
-        }
-    }
-
-    Elem(size)
+pub fn fixed_rect_elem<'a>(size: Size) -> impl WidgetParams {
+    FixedRectParams(size)
 }
 
-pub struct FixedRect(pub Size);
+struct FixedRectParams(Size);
+
+impl WidgetParams for FixedRectParams {
+    type Widget = FixedRect;
+}
+
+
+pub struct FixedRect();
 
 /// Much like the [FixedRect] the [Checkmark] also only has a fixed size, but it also renders a
 /// checkmark (as the name suggests).
-impl<C: Debug> Widget<C> for FixedRect {
+impl Widget for FixedRect {
     type Event = ();
 
-    fn measure(
+    fn build(
+        _: &mut Self::Params,
+        _: LayoutConstraint,
+        _: &mut Piet,
+        _: &Theme,
+    ) -> FixedRect {
+        FixedRect()
+    }
+
+    fn update(
         &mut self,
-        _max_size: [Option<f64>; 2],
-        _renderer: &mut Piet,
-        _theme: &Theme,
-        _: &mut C,
-    ) -> Size {
-        self.0
+        _: &mut Self::Params,
+        _: LayoutConstraint,
+        _: &mut Piet,
+        _: &Theme,
+    ) {
     }
 
     fn min_size(&self) -> Size {

@@ -1,75 +1,64 @@
-use std::fmt::Debug;
-
 use druid_shell::kurbo;
 use druid_shell::kurbo::{Rect, Size};
 use piet_common::Piet;
 
-use super::{NoneElement, NoneWidget};
+use super::NoneWidget;
 pub use crate::theme::*;
-use crate::{Element, InputState, Widget};
+use crate::{InputState, LayoutConstraint, Widget, WidgetParams};
 
 /// More variants can be added here in the future. This is obviously a
 /// suboptimal solution for the problem, the best solution would require
 /// variadic generics or perhaps a macro that generates variants as needed
 /// (it's unclear to me if or how that would work with a declarative macro).
-pub enum OrElem<A = NoneElement, B = NoneElement, C = NoneElement, D = NoneElement> {
+pub enum OrElem<A = NoneWidget, B = NoneWidget, C = NoneWidget, D = NoneWidget> {
     A(A),
     B(B),
     C(C),
     D(D),
 }
 
-impl<A, B, C, D, E> Element<E> for OrElem<A, B, C, D>
+impl<A, B, C, D> OrElem<A, B, C, D> {
+    pub fn as_a_mut(&mut self) -> Option<&mut A> {
+        if let OrElem::A(w) = self {
+            Some(w)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_b_mut(&mut self) -> Option<&mut B> {
+        if let OrElem::B(w) = self {
+            Some(w)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_c_mut(&mut self) -> Option<&mut C> {
+        if let OrElem::C(w) = self {
+            Some(w)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_d_mut(&mut self) -> Option<&mut D> {
+        if let OrElem::D(w) = self {
+            Some(w)
+        } else {
+            None
+        }
+    }
+}
+
+impl<A, B, C, D> WidgetParams for OrElem<A, B, C, D>
 where
-    A: Element<E>,
-    B: Element<E>,
-    C: Element<E>,
-    D: Element<E>,
-    E: Debug,
+    A: WidgetParams,
+    B: WidgetParams,
+    C: WidgetParams,
+    D: WidgetParams,
 {
     type Widget = OrWidget<A::Widget, B::Widget, C::Widget, D::Widget>;
-
-    fn build(self) -> Self::Widget {
-        match self {
-            OrElem::A(e) => OrWidget::A(e.build()),
-            OrElem::B(e) => OrWidget::B(e.build()),
-            OrElem::C(e) => OrWidget::C(e.build()),
-            OrElem::D(e) => OrWidget::D(e.build()),
-        }
-    }
-
-    fn update(self, widget: &mut Self::Widget) {
-        match self {
-            OrElem::A(e) => {
-                if let OrWidget::A(w) = widget {
-                    e.update(w);
-                } else {
-                    *widget = OrWidget::A(e.build());
-                }
-            }
-            OrElem::B(e) => {
-                if let OrWidget::B(w) = widget {
-                    e.update(w);
-                } else {
-                    *widget = OrWidget::B(e.build());
-                }
-            }
-            OrElem::C(e) => {
-                if let OrWidget::C(w) = widget {
-                    e.update(w);
-                } else {
-                    *widget = OrWidget::C(e.build());
-                }
-            }
-            OrElem::D(e) => {
-                if let OrWidget::D(w) = widget {
-                    e.update(w);
-                } else {
-                    *widget = OrWidget::D(e.build());
-                }
-            }
-        }
-    }
 }
 
 pub enum OrWidget<A = NoneWidget, B = NoneWidget, C = NoneWidget, D = NoneWidget> {
@@ -79,28 +68,86 @@ pub enum OrWidget<A = NoneWidget, B = NoneWidget, C = NoneWidget, D = NoneWidget
     D(D),
 }
 
-impl<A, B, C, D, E> Widget<E> for OrWidget<A, B, C, D>
+impl<A, B, C, D> Widget for OrWidget<A, B, C, D>
 where
-    A: Widget<E>,
-    B: Widget<E>,
-    C: Widget<E>,
-    D: Widget<E>,
-    E: Debug,
+    A: Widget,
+    B: Widget,
+    C: Widget,
+    D: Widget,
 {
+    type Params = OrElem<A::Params, B::Params, C::Params, D::Params>;
     type Event = ();
 
-    fn measure(
-        &mut self,
-        max_size: [Option<f64>; 2],
+    fn build(
+        params: &mut Self::Params,
+        constraint: LayoutConstraint,
         renderer: &mut Piet,
         theme: &Theme,
-        context: &mut E,
-    ) -> Size {
-        match self {
-            OrWidget::A(w) => w.measure(max_size, renderer, theme, context),
-            OrWidget::B(w) => w.measure(max_size, renderer, theme, context),
-            OrWidget::C(w) => w.measure(max_size, renderer, theme, context),
-            OrWidget::D(w) => w.measure(max_size, renderer, theme, context),
+    ) -> Self {
+        match params {
+            OrElem::A(e) => OrWidget::A(A::build(
+                e,
+                constraint,
+                renderer,
+                theme,
+            )),
+            OrElem::B(e) => OrWidget::B(B::build(
+                e,
+                constraint,
+                renderer,
+                theme,
+            )),
+            OrElem::C(e) => OrWidget::C(C::build(
+                e,
+                constraint,
+                renderer,
+                theme,
+            )),
+            OrElem::D(e) => OrWidget::D(D::build(
+                e,
+                constraint,
+                renderer,
+                theme,
+            )),
+        }
+    }
+
+    fn update(
+        &mut self,
+        params: &mut Self::Params,
+        constraint: LayoutConstraint,
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) {
+        match params {
+            OrElem::A(e) => {
+                if let OrWidget::A(w) = self {
+                    w.update(e, constraint, renderer, theme);
+                } else {
+                    *self = OrWidget::A(A::build(e, constraint, renderer, theme));
+                }
+            }
+            OrElem::B(e) => {
+                if let OrWidget::B(w) = self {
+                    w.update(e, constraint, renderer, theme);
+                } else {
+                    *self = OrWidget::B(B::build(e, constraint, renderer, theme));
+                }
+            }
+            OrElem::C(e) => {
+                if let OrWidget::C(w) = self {
+                    w.update(e, constraint, renderer, theme);
+                } else {
+                    *self = OrWidget::C(C::build(e, constraint, renderer, theme));
+                }
+            }
+            OrElem::D(e) => {
+                if let OrWidget::D(w) = self {
+                    w.update(e, constraint, renderer, theme);
+                } else {
+                    *self = OrWidget::D(D::build(e, constraint, renderer, theme));
+                }
+            }
         }
     }
 
@@ -124,37 +171,70 @@ where
 
     fn render(
         &mut self,
+        params: &mut Self::Params,
         rect: Rect,
         renderer: &mut Piet,
         theme: &Theme,
         input_state: &InputState,
         layer: u8,
         focus: bool,
-        context: &mut E,
     ) {
         use OrWidget::*;
 
         match self {
-            A(w) => w.render(rect, renderer, theme, input_state, layer, focus, context),
-            B(w) => w.render(rect, renderer, theme, input_state, layer, focus, context),
-            C(w) => w.render(rect, renderer, theme, input_state, layer, focus, context),
-            D(w) => w.render(rect, renderer, theme, input_state, layer, focus, context),
+            A(w) => w.render(
+                params.as_a_mut().unwrap(),
+                rect,
+                renderer,
+                theme,
+                input_state,
+                layer,
+                focus,
+            ),
+            B(w) => w.render(
+                params.as_b_mut().unwrap(),
+                rect,
+                renderer,
+                theme,
+                input_state,
+                layer,
+                focus,
+            ),
+            C(w) => w.render(
+                params.as_c_mut().unwrap(),
+                rect,
+                renderer,
+                theme,
+                input_state,
+                layer,
+                focus,
+            ),
+            D(w) => w.render(
+                params.as_d_mut().unwrap(),
+                rect,
+                renderer,
+                theme,
+                input_state,
+                layer,
+                focus,
+            ),
         }
     }
 
-    fn test_input_pos_layer(&mut self, rect: Rect, input_pos: kurbo::Point) -> Option<u8> {
+    fn test_input_pos_layer(&mut self, params: &mut Self::Params, rect: Rect, input_pos: kurbo::Point) -> Option<u8> {
         use OrWidget::*;
 
         match self {
-            A(w) => w.test_input_pos_layer(rect, input_pos),
-            B(w) => w.test_input_pos_layer(rect, input_pos),
-            C(w) => w.test_input_pos_layer(rect, input_pos),
-            D(w) => w.test_input_pos_layer(rect, input_pos),
+            A(w) => w.test_input_pos_layer(params.as_a_mut().unwrap(), rect, input_pos),
+            B(w) => w.test_input_pos_layer(params.as_b_mut().unwrap(), rect, input_pos),
+            C(w) => w.test_input_pos_layer(params.as_c_mut().unwrap(), rect, input_pos),
+            D(w) => w.test_input_pos_layer(params.as_d_mut().unwrap(), rect, input_pos),
         }
     }
 
     fn handle_cursor_input(
         &mut self,
+        params: &mut Self::Params,
         rect: Rect,
         cursor_pos: kurbo::Point,
         cursor_layer: u8,
@@ -162,7 +242,6 @@ where
         input_state: &InputState,
         theme: &Theme,
         focus: bool,
-        context: &mut E,
     ) -> (crate::InputReturn, Option<Self::Event>) {
         use OrWidget::*;
 
@@ -170,6 +249,7 @@ where
             match self {
                 A(w) => {
                     w.handle_cursor_input(
+                        params.as_a_mut().unwrap(),
                         rect,
                         cursor_pos,
                         cursor_layer,
@@ -177,12 +257,12 @@ where
                         input_state,
                         theme,
                         focus,
-                        context,
                     )
                     .0
                 }
                 B(w) => {
                     w.handle_cursor_input(
+                        params.as_b_mut().unwrap(),
                         rect,
                         cursor_pos,
                         cursor_layer,
@@ -190,12 +270,12 @@ where
                         input_state,
                         theme,
                         focus,
-                        context,
                     )
                     .0
                 }
                 C(w) => {
                     w.handle_cursor_input(
+                        params.as_c_mut().unwrap(),
                         rect,
                         cursor_pos,
                         cursor_layer,
@@ -203,12 +283,12 @@ where
                         input_state,
                         theme,
                         focus,
-                        context,
                     )
                     .0
                 }
                 D(w) => {
                     w.handle_cursor_input(
+                        params.as_d_mut().unwrap(),
                         rect,
                         cursor_pos,
                         cursor_layer,
@@ -216,7 +296,6 @@ where
                         input_state,
                         theme,
                         focus,
-                        context,
                     )
                     .0
                 }
@@ -227,27 +306,27 @@ where
 
     fn handle_keyboard_input(
         &mut self,
+        params: &mut Self::Params,
         rect: Rect,
         input: &crate::KeyboardInput,
         input_state: &InputState,
         theme: &Theme,
         focus: bool,
-        context: &mut E,
     ) -> Option<Self::Event> {
         use OrWidget::*;
 
         match self {
             A(w) => {
-                w.handle_keyboard_input(rect, input, input_state, theme, focus, context);
+                w.handle_keyboard_input(params.as_a_mut().unwrap(), rect, input, input_state, theme, focus);
             }
             B(w) => {
-                w.handle_keyboard_input(rect, input, input_state, theme, focus, context);
+                w.handle_keyboard_input(params.as_b_mut().unwrap(), rect, input, input_state, theme, focus);
             }
             C(w) => {
-                w.handle_keyboard_input(rect, input, input_state, theme, focus, context);
+                w.handle_keyboard_input(params.as_c_mut().unwrap(), rect, input, input_state, theme, focus);
             }
             D(w) => {
-                w.handle_keyboard_input(rect, input, input_state, theme, focus, context);
+                w.handle_keyboard_input(params.as_d_mut().unwrap(), rect, input, input_state, theme, focus);
             }
         }
 

@@ -8,33 +8,68 @@ use super::or::OrElem;
 use super::*;
 use crate::*;
 
-pub struct Button<D, H> {
+pub struct Button<D> {
     pub variant: WidgetVariant,
     pub drawable: D,
     pub layout: Size,
-    pub on_click: H,
 }
 
 #[derive(Copy, Clone, Debug)]
 pub enum ButtonEvent {
     Click,
 }
+pub struct ButtonElem<E, H> {
+    element: E,
+    on_click: H,
+}
 
-impl<C: Debug, D: Widget<C>, H: FnMut(&mut C)> Widget<C> for Button<D, H> {
+impl<'a, E: WidgetParams, H: Fn() + 'a> WidgetParams for ButtonElem<E, H> {
+    type Widget = Button<E::Widget>;
+}
+
+impl<D: Widget, H: FnMut()> Widget for Button<D> {
+    type Params = ButtonElem<D::Params, H>;
     type Event = ButtonEvent;
 
-    fn measure(
-        &mut self,
+    fn build(
+        params: &mut Self::Params,
         max_size: [Option<f64>; 2],
         renderer: &mut Piet,
         theme: &Theme,
-        context: &mut C,
-    ) -> Size {
+    ) -> Self {
         // let rect_theme = theme.rect.get(self.variant, true);
+        let mut drawable = params.element.build(
+            max_size,
+            renderer,
+            theme,
+        );
 
-        self.layout = measure_rect(&mut self.drawable, max_size, renderer, theme, context);
+        let layout = measure_rect(&mut drawable, max_size, renderer, theme);
 
-        self.layout
+        Button {
+            variant: WidgetVariant::Normal,
+            drawable,
+            layout,
+        }
+    }
+
+    fn update(
+        &mut self,
+        params: &mut Self::Params,
+        max_size: [Option<f64>; 2],
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) {
+        self.drawable.update(
+            params.element,
+            max_size,
+            renderer,
+            theme,
+        );
+
+        // TODO: These fields are kinda redundant.
+        self.layout = measure_rect(&mut self.drawable, max_size, renderer, theme);
+        self.on_click = self.on_click;
     }
 
     fn min_size(&self) -> Size {
@@ -53,7 +88,6 @@ impl<C: Debug, D: Widget<C>, H: FnMut(&mut C)> Widget<C> for Button<D, H> {
         input_state: &InputState,
         layer: u8,
         focus: bool,
-        context: &mut C,
     ) {
         render_rect(
             false,
@@ -65,7 +99,6 @@ impl<C: Debug, D: Widget<C>, H: FnMut(&mut C)> Widget<C> for Button<D, H> {
             input_state,
             layer,
             focus,
-            context,
         );
     }
 
@@ -78,7 +111,6 @@ impl<C: Debug, D: Widget<C>, H: FnMut(&mut C)> Widget<C> for Button<D, H> {
         _input_state: &InputState,
         _theme: &Theme,
         _: bool,
-        context: &mut C,
     ) -> (InputReturn, Option<ButtonEvent>) {
         // let rect_theme = theme.rect.get(self.variant, true);
 
@@ -87,7 +119,7 @@ impl<C: Debug, D: Widget<C>, H: FnMut(&mut C)> Widget<C> for Button<D, H> {
             match input {
                 CursorInput::Up(..) => {
                     if rect.contains(cursor_pos) {
-                        (self.on_click)(context);
+                        (self.on_click)();
                         Some(ButtonEvent::Click)
                     } else {
                         None
@@ -125,7 +157,7 @@ impl<C: Debug, D: Widget<C>, H: FnMut(&mut C)> Widget<C> for Button<D, H> {
 //     on_click: H,
 // }
 //
-// impl<C: Debug, H: Fn(&mut C)> Widget<C> for TextButtonWidget<H> {
+// impl<C: Debug, H: Fn(&mut C)> Widget for TextButtonWidget<H> {
 //     type Event = ();
 //
 //     fn measure(
@@ -162,7 +194,7 @@ impl<C: Debug, D: Widget<C>, H: FnMut(&mut C)> Widget<C> for Button<D, H> {
 //     ) {
 //         let h = &mut || ();
 //         let mut w = text_button(self.text, &mut self.layout, h);
-//         <Button<_, _> as Widget<C>>::render(&mut w, rect, renderer, theme, input_state, layer, focus)
+//         <Button<_, _> as Widget>::render(&mut w, rect, renderer, theme, input_state, layer, focus)
 //     }
 //
 //     fn handle_cursor_input(
@@ -189,47 +221,25 @@ impl<C: Debug, D: Widget<C>, H: FnMut(&mut C)> Widget<C> for Button<D, H> {
 //     }
 // }
 
-pub fn button_elem<C: Debug, E: Element<C>>(
+pub fn button_elem<'a, E: WidgetParams>(
     element: E,
-    on_click: impl Fn(&mut C),
-) -> impl Element<C> {
-    pub struct ButtonElem<E, H> {
-        element: E,
-        on_click: H,
-    }
-
-    impl<C: Debug, E: Element<C>, H: Fn(&mut C)> Element<C> for ButtonElem<E, H> {
-        type Widget = Button<E::Widget, H>;
-
-        fn build(self) -> Self::Widget {
-            Button {
-                variant: WidgetVariant::Normal,
-                drawable: self.element.build(),
-                layout: Default::default(),
-                on_click: self.on_click,
-            }
-        }
-
-        fn update(self, widget: &mut Self::Widget) {
-            self.element.update(&mut widget.drawable);
-        }
-    }
-
+    on_click: impl Fn() + 'a,
+) -> impl WidgetParams {
     ButtonElem { element, on_click }
 }
 
-pub fn text_button_elem<C: Debug>(
+pub fn text_button_elem<'a>(
     text: &'static str,
-    on_click: impl Fn(&mut C),
-) -> impl Element<C> {
+    on_click: impl Fn() + 'a,
+) -> impl WidgetParams + 'a {
     button_elem(super::drawables::text_elem(text), on_click)
 }
 
-pub fn checkbox_elem<C: Debug>(checked: bool, on_click: impl Fn(&mut C)) -> impl Element<C> {
+pub fn checkbox_elem(checked: bool, on_click: impl Fn()) -> impl WidgetParams<'static> {
     button_elem(
         if checked {
             // Sadly rust doesn't seem to be able to infer this.
-            OrElem::<_, _, NoneElement, NoneElement>::A(checkmark_elem(Size::new(12., 12.)))
+            OrElem/*::<_, _, NoneWidget, NoneWidget>*/::A(checkmark_elem(Size::new(12., 12.)))
         } else {
             OrElem::B(fixed_rect_elem(Size::new(12., 12.)))
         },
@@ -237,16 +247,16 @@ pub fn checkbox_elem<C: Debug>(checked: bool, on_click: impl Fn(&mut C)) -> impl
     )
 }
 
-// pub fn text_button_elem<C: Debug>(
+// pub fn text_button_elem(
 //     text: &'static str,
 //     on_click: impl Fn(&mut C),
-// ) -> impl Element<C> {
+// ) -> impl WidgetParams {
 //     pub struct TextButtonElement<H> {
 //         text: &'static str,
 //         on_click: H,
 //     }
 
-//     impl<C: Debug, H: Fn(&mut C)> Element<C> for TextButtonElement<H> {
+//     impl<C: Debug, H: Fn(&mut C)> WidgetParams for TextButtonElement<H> {
 //         type Widget = TextButtonWidget<H>;
 
 //         fn build(self) -> Self::Widget {
