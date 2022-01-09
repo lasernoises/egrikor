@@ -28,35 +28,36 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 // const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete-editing");
 // const CANCEL_EDITING: Selector = Selector::new("druid.builtin.textbox-cancel-editing");
 
-pub fn textbox<'a>(content: &'a mut TextBoxContent) -> impl WidgetParams + 'a {
+pub fn textbox<'a>(content: &'a mut TextBoxContent) -> impl Widget + 'a {
     TextBoxParams(content)
 }
 
 struct TextBoxParams<'a>(&'a mut TextBoxContent);
 
-impl<'a> WidgetParams for TextBoxParams<'a> {
-    type Widget = TextBox<'a>;
+impl<'a> Widget for TextBoxParams<'a> {
+    type State = TextBox;
+    type Event = ();
 
     fn build(
-        self,
+        &mut self,
         constraint: LayoutConstraint,
         renderer: &mut Piet,
         theme: &Theme,
-    ) -> Self::Widget {
-        let widget = TextBox {
+    ) -> Self::State {
+        let mut state = TextBox {
             min_size: Size::ZERO,
-            content: self.0,
+            // content: self.0,
         };
-        self.update(constraint, renderer, theme, &mut widget);
-        widget
+        self.update(&mut state, constraint, renderer, theme);
+        state
     }
 
     fn update(
-        self,
-        max_size: [Option<f64>; 2],
+        &mut self,
+        state: &mut Self::State,
+        constraint: LayoutConstraint,
         renderer: &mut Piet,
         _theme: &Theme,
-        widget: &mut Self::Widget,
     ) {
         // self.editor.rebuild_if_needed(renderer.text());
 
@@ -64,7 +65,7 @@ impl<'a> WidgetParams for TextBoxParams<'a> {
         let text_insets = Insets::new(4.0, 2.0, 4.0, 2.0);
 
         self.0.placeholder.rebuild_if_needed(renderer.text());
-        if let Some(width) = max_size[0] {
+        if let Some(width) = constraint[0] {
             if self.0.multiline {
                 self.0.editor.set_wrap_width(width - text_insets.x_value());
             }
@@ -94,8 +95,343 @@ impl<'a> WidgetParams for TextBoxParams<'a> {
         //     bottom_padding + (text_metrics.size.height - text_metrics.first_baseline);
         // renderer.set_baseline_offset(baseline_off);
 
-        widget.min_size = Size::new(width, height);
+        state.min_size = Size::new(width, height);
     }
+
+    // This will always be called after measure.
+    fn min_size(&self, state: &Self::State) -> Size {
+        state.min_size
+    }
+
+    /// Single-layer widgets can just ignore the `layer` parameter since `render` they should only
+    /// be called for layers a widget actually has.
+    fn render(
+        &mut self,
+        state: &mut Self::State,
+        rect: Rect,
+        renderer: &mut Piet,
+        _theme: &Theme,
+        _input_state: &InputState,
+        _layer: u8,
+        focus: bool,
+    ) {
+        // let size = renderer.size();
+        let background_color = Color::rgb8(0x3a, 0x3a, 0x3a);
+        let selection_color = Color::rgb8(0xf3, 0x00, 0x21);
+        let cursor_color = Color::WHITE;
+        let border_width = 1.;
+        let text_insets = Insets::new(4.0, 2.0, 4.0, 2.0);
+
+        let border_color = if focus {
+            Color::rgb8(0x00, 0x8d, 0xdd)
+        } else {
+            Color::rgb8(0x3a, 0x3a, 0x3a)
+        };
+
+        // Paint the background
+        let clip_rect = Size::new(rect.width() - border_width, rect.height())
+            .to_rect()
+            .inset(-border_width / 2.0)
+            .to_rounded_rect(2.);
+
+        // let clip_rect = rect
+        //     .inset((border_width, 0.))
+        //     .inset(-border_width / 2.)
+        //     .to_rounded_rect(2.);
+
+        renderer
+            .with_save(|rc| {
+                rc.transform(Affine::translate((rect.x0, rect.y0)));
+
+                rc.fill(clip_rect, &background_color);
+
+                // Render text, selection, and cursor inside a clip
+                rc.with_save(|rc| {
+                    rc.clip(clip_rect);
+
+                    // Shift everything inside the clip by the hscroll_offset
+                    rc.transform(Affine::translate((-self.0.hscroll_offset, 0.)));
+
+                    let text_pos = self.0.text_position();
+                    // Draw selection rect
+                    if focus {
+                        for sel in self.0.editor.selection_rects() {
+                            let sel = sel + text_pos.to_vec2();
+                            let rounded = sel.to_rounded_rect(1.0);
+                            rc.fill(rounded, &selection_color);
+                        }
+                    }
+                    self.0.editor.draw(rc, text_pos);
+                    // if !data.is_empty() {
+                    //     if is_focused {
+                    //         for sel in self.editor.selection_rects() {
+                    //             let sel = sel + text_pos.to_vec2();
+                    //             let rounded = sel.to_rounded_rect(1.0);
+                    //             rc.fill(rounded, &selection_color);
+                    //         }
+                    //     }
+                    //     self.editor.draw(rc, text_pos);
+                    // } else {
+                    //     self.placeholder.draw(rc, text_pos);
+                    // }
+
+                    // Paint the cursor if focused and there's no selection
+                    if focus
+                    /* && self.should_draw_cursor() */
+                    {
+                        // if there's no data, we always draw the cursor based on
+                        // our alignment.
+                        // let cursor = if data.is_empty() {
+                        //     let dx = match self.alignment {
+                        //         TextAlignment::Start | TextAlignment::Justified => text_insets.x0,
+                        //         TextAlignment::Center => size.width / 2.0,
+                        //         TextAlignment::End => size.width - text_insets.x1,
+                        //     };
+                        //     self.editor.cursor_line() + Vec2::new(dx, text_insets.y0)
+                        // } else {
+                        let cursor = {
+                            // the cursor position can extend past the edge of the layout
+                            // (commonly when there is trailing whitespace) so we clamp it
+                            // to the right edge.
+                            let mut cursor = self.0.editor.cursor_line() + text_pos.to_vec2();
+                            let dx = rect.width() + self.0.hscroll_offset
+                                - text_insets.x0
+                                - cursor.p0.x;
+                            if dx < 0.0 {
+                                cursor = cursor + Vec2::new(dx, 0.);
+                            }
+                            cursor
+                        };
+
+                        rc.stroke(cursor, &cursor_color, 1.);
+                    }
+
+                    Ok(())
+                })
+                .unwrap();
+
+                // Paint the border
+                rc.stroke(clip_rect, &border_color, border_width);
+
+                Ok(())
+            })
+            .unwrap();
+    }
+
+    fn handle_cursor_input(
+        &mut self,
+        state: &mut Self::State,
+        rect: Rect,
+        cursor_pos: Point,
+        _cursor_layer: u8,
+        input: CursorInput,
+        input_state: &InputState,
+        _theme: &Theme,
+        _focus: bool,
+    ) -> (InputReturn, Option<()>) {
+        self.0.suppress_adjust_hscroll = false;
+
+        match input {
+            CursorInput::Down(_button) => {
+                // ctx.request_focus();
+                // ctx.set_active(true);
+                // let mut mouse = mouse.clone();
+                // let rect_theme = theme.rect.get(WidgetVariant::Normal, true);
+
+                if rect.contains(cursor_pos) {
+                    let cursor_pos = [
+                        cursor_pos.x - rect.x0 + self.0.hscroll_offset - self.0.alignment_offset,
+                        cursor_pos.x - rect.y0,
+                    ];
+
+                    // mouse_pos += Vec2::new(self.hscroll_offset - self.alignment_offset, 0.0);
+
+                    // if !mouse.focus {
+                    // }
+                    self.0.was_focused_from_click = true;
+                    // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
+                    self.0.editor.click(cursor_pos, input_state.mods);
+
+                    return (InputReturn { demand_focus: true }, None);
+                }
+
+                // ctx.request_paint();
+            }
+            CursorInput::Move => {
+                let cursor_pos = [
+                    cursor_pos.x - rect.x0 + self.0.hscroll_offset - self.0.alignment_offset,
+                    cursor_pos.y - rect.y0,
+                ];
+
+                // ctx.set_cursor(&Cursor::IBeam);
+                if input_state.mouse_down
+                    && cursor_pos[0] >= 0.
+                    && cursor_pos[1] >= 0.
+                    && cursor_pos[0] <= rect.width()
+                    && cursor_pos[1] <= rect.height()
+                {
+                    self.0.editor.drag(cursor_pos, input_state.mods);
+                }
+                // if ctx.is_active() {
+                //     // ctx.request_paint();
+                // }
+            }
+            _ => (),
+        }
+
+        Default::default()
+    }
+
+    fn handle_keyboard_input(
+        &mut self,
+        state: &mut Self::State,
+        _rect: Rect,
+        input: &KeyboardInput,
+        _input_state: &InputState,
+        _theme: &Theme,
+        _focus: bool,
+    ) -> Option<()> {
+        self.0.suppress_adjust_hscroll = false;
+
+        match input {
+            KeyboardInput::KeyDown(key_event) => {
+                match key_event {
+                    // Tab and shift+tab
+                    // k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => ctx.focus_next(),
+                    // k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => ctx.focus_prev(),
+                    k_e => {
+                        if let Some(edit) = BasicTextInput.handle_event(k_e) {
+                            self.0.suppress_adjust_hscroll = matches!(edit, EditAction::SelectAll);
+                            self.0.editor.do_edit(edit);
+                            self.0.editor.update();
+                            // an explicit request update in case the selection
+                            // state has changed, but the data hasn't.
+                            // ctx.request_update();
+                            // ctx.request_paint();
+                        }
+                    }
+                };
+                // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
+                // ctx.request_paint();
+            }
+        }
+
+        None
+    }
+
+    // fn handle_input(
+    //     &mut self,
+    //     rect: Rect,
+    //     input: &Input,
+    //     input_state: &InputState,
+    //     theme: &Theme,
+    //     _: bool,
+    // ) -> InputReturn {
+    //     self.suppress_adjust_hscroll = false;
+    //     match input {
+    //         &Input::MouseDown { pos: mouse_pos, button } => {
+    //             // ctx.request_focus();
+    //             // ctx.set_active(true);
+    //             // let mut mouse = mouse.clone();
+    //             let rect_theme = theme.rect.get(WidgetVariant::Normal, true);
+
+    //             if rect.contains(mouse_pos) {
+    //                 let mouse_pos = [
+    //                     mouse_pos.x - rect.x0
+    //                         + self.hscroll_offset - self.alignment_offset,
+    //                     mouse_pos.x - rect.y0,
+    //                 ];
+
+    //                 // mouse_pos += Vec2::new(self.hscroll_offset - self.alignment_offset, 0.0);
+
+    //                 // if !mouse.focus {
+    //                 // }
+    //                 self.was_focused_from_click = true;
+    //                 // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
+    //                 self.editor.click(mouse_pos, input_state.mods);
+
+    //                 return InputReturn { demand_focus: true };
+    //             }
+
+    //             // ctx.request_paint();
+    //         }
+    //         Input::MouseMove { pos: mouse_pos } => {
+    //             let mouse_pos = [
+    //                 mouse_pos.x - rect.x0
+    //                     + self.hscroll_offset - self.alignment_offset,
+    //                 mouse_pos.y - rect.y0,
+    //             ];
+
+    //             // ctx.set_cursor(&Cursor::IBeam);
+    //             if
+    //                 input_state.mouse_down
+    //                     && mouse_pos[0] >= 0.
+    //                     && mouse_pos[1] >= 0.
+    //                     && mouse_pos[0] <= rect.width()
+    //                     && mouse_pos[1] <= rect.height()
+    //             {
+    //                 self.editor.drag(mouse_pos, input_state.mods);
+    //             }
+    //             // if ctx.is_active() {
+    //             //     // ctx.request_paint();
+    //             // }
+    //         }
+    //         // Input::MouseUp { pos, button } => {
+    //         //     if ctx.is_active() {
+    //         //         ctx.set_active(false);
+    //         //         // ctx.request_paint();
+    //         //     }
+    //         // }
+
+    //         // Event::Timer(id) => {
+    //         //     if *id == self.cursor_timer {
+    //         //         self.cursor_on = !self.cursor_on;
+    //         //         ctx.request_paint();
+    //         //         self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
+    //         //     }
+    //         // }
+    //         // Event::Command(ref cmd) if ctx.is_focused() && cmd.is(crate::commands::COPY) => {
+    //         //     self.editor.copy(data);
+    //         //     ctx.set_handled();
+    //         // }
+    //         // Event::Command(ref cmd) if ctx.is_focused() && cmd.is(crate::commands::CUT) => {
+    //         //     self.editor.cut(data);
+    //         //     ctx.set_handled();
+    //         // }
+    //         // Event::Command(cmd) if cmd.is(TextBox::PERFORM_EDIT) => {
+    //         //     let edit = cmd.get_unchecked(TextBox::PERFORM_EDIT);
+    //         //     self.editor.do_edit(edit.to_owned(), data);
+    //         // }
+    //         // Event::Paste(ref item) => {
+    //         //     if let Some(string) = item.get_string() {
+    //         //         self.editor.paste(string, data);
+    //         //     }
+    //         // }
+    //         Input::KeyDown(key_event) => {
+    //             match key_event {
+    //                 // Tab and shift+tab
+    //                 // k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => ctx.focus_next(),
+    //                 // k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => ctx.focus_prev(),
+    //                 k_e => {
+    //                     if let Some(edit) = BasicTextInput.handle_event(k_e) {
+    //                         self.suppress_adjust_hscroll = matches!(edit, EditAction::SelectAll);
+    //                         self.editor.do_edit(edit);
+    //                         self.editor.update();
+    //                         // an explicit request update in case the selection
+    //                         // state has changed, but the data hasn't.
+    //                         // ctx.request_update();
+    //                         // ctx.request_paint();
+    //                     }
+    //                 }
+    //             };
+    //             // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
+    //             // ctx.request_paint();
+    //         }
+    //         _ => (),
+    //     }
+
+    //     Default::default()
+    // }
 }
 
 #[derive(Debug, Clone)]
@@ -129,7 +465,7 @@ pub struct TextBoxContent {
 /// [`Formatter`]. You can create a [`ValueTextBox`] by passing the appropriate
 /// [`Formatter`] to [`TextBox::with_formatter`].
 #[derive(Debug)]
-pub struct TextBox<'a> {
+pub struct TextBox {
     // placeholder: TextLayout<String>,
     // editor: Editor<T>,
     // // this can be Box<dyn TextInput> in the future
@@ -149,7 +485,7 @@ pub struct TextBox<'a> {
     // /// then we select our entire contents.
     // was_focused_from_click: bool,
     min_size: Size,
-    content: &'a mut TextBoxContent,
+    // content: &'a mut TextBoxContent,
 }
 
 impl TextBoxContent {
@@ -415,342 +751,6 @@ impl TextBoxContent {
             }
         }
     }
-}
-
-impl<'a> Widget for TextBox<'a> {
-    type Event = ();
-
-    // This will always be called after measure.
-    fn min_size(&self) -> Size {
-        self.min_size
-    }
-
-    /// Single-layer widgets can just ignore the `layer` parameter since `render` they should only
-    /// be called for layers a widget actually has.
-    fn render(
-        &mut self,
-        rect: Rect,
-        renderer: &mut Piet,
-        _theme: &Theme,
-        _input_state: &InputState,
-        _layer: u8,
-        focus: bool,
-    ) {
-        // let size = renderer.size();
-        let background_color = Color::rgb8(0x3a, 0x3a, 0x3a);
-        let selection_color = Color::rgb8(0xf3, 0x00, 0x21);
-        let cursor_color = Color::WHITE;
-        let border_width = 1.;
-        let text_insets = Insets::new(4.0, 2.0, 4.0, 2.0);
-
-        let border_color = if focus {
-            Color::rgb8(0x00, 0x8d, 0xdd)
-        } else {
-            Color::rgb8(0x3a, 0x3a, 0x3a)
-        };
-
-        // Paint the background
-        let clip_rect = Size::new(rect.width() - border_width, rect.height())
-            .to_rect()
-            .inset(-border_width / 2.0)
-            .to_rounded_rect(2.);
-
-        // let clip_rect = rect
-        //     .inset((border_width, 0.))
-        //     .inset(-border_width / 2.)
-        //     .to_rounded_rect(2.);
-
-        renderer
-            .with_save(|rc| {
-                rc.transform(Affine::translate((rect.x0, rect.y0)));
-
-                rc.fill(clip_rect, &background_color);
-
-                // Render text, selection, and cursor inside a clip
-                rc.with_save(|rc| {
-                    rc.clip(clip_rect);
-
-                    // Shift everything inside the clip by the hscroll_offset
-                    rc.transform(Affine::translate((-self.content.hscroll_offset, 0.)));
-
-                    let text_pos = self.content.text_position();
-                    // Draw selection rect
-                    if focus {
-                        for sel in self.content.editor.selection_rects() {
-                            let sel = sel + text_pos.to_vec2();
-                            let rounded = sel.to_rounded_rect(1.0);
-                            rc.fill(rounded, &selection_color);
-                        }
-                    }
-                    self.content.editor.draw(rc, text_pos);
-                    // if !data.is_empty() {
-                    //     if is_focused {
-                    //         for sel in self.editor.selection_rects() {
-                    //             let sel = sel + text_pos.to_vec2();
-                    //             let rounded = sel.to_rounded_rect(1.0);
-                    //             rc.fill(rounded, &selection_color);
-                    //         }
-                    //     }
-                    //     self.editor.draw(rc, text_pos);
-                    // } else {
-                    //     self.placeholder.draw(rc, text_pos);
-                    // }
-
-                    // Paint the cursor if focused and there's no selection
-                    if focus
-                    /* && self.should_draw_cursor() */
-                    {
-                        // if there's no data, we always draw the cursor based on
-                        // our alignment.
-                        // let cursor = if data.is_empty() {
-                        //     let dx = match self.alignment {
-                        //         TextAlignment::Start | TextAlignment::Justified => text_insets.x0,
-                        //         TextAlignment::Center => size.width / 2.0,
-                        //         TextAlignment::End => size.width - text_insets.x1,
-                        //     };
-                        //     self.editor.cursor_line() + Vec2::new(dx, text_insets.y0)
-                        // } else {
-                        let cursor = {
-                            // the cursor position can extend past the edge of the layout
-                            // (commonly when there is trailing whitespace) so we clamp it
-                            // to the right edge.
-                            let mut cursor = self.content.editor.cursor_line() + text_pos.to_vec2();
-                            let dx = rect.width() + self.content.hscroll_offset
-                                - text_insets.x0
-                                - cursor.p0.x;
-                            if dx < 0.0 {
-                                cursor = cursor + Vec2::new(dx, 0.);
-                            }
-                            cursor
-                        };
-
-                        rc.stroke(cursor, &cursor_color, 1.);
-                    }
-
-                    Ok(())
-                })
-                .unwrap();
-
-                // Paint the border
-                rc.stroke(clip_rect, &border_color, border_width);
-
-                Ok(())
-            })
-            .unwrap();
-    }
-
-    fn handle_cursor_input(
-        &mut self,
-        rect: Rect,
-        cursor_pos: Point,
-        _cursor_layer: u8,
-        input: CursorInput,
-        input_state: &InputState,
-        _theme: &Theme,
-        _focus: bool,
-    ) -> (InputReturn, Option<()>) {
-        self.content.suppress_adjust_hscroll = false;
-
-        match input {
-            CursorInput::Down(_button) => {
-                // ctx.request_focus();
-                // ctx.set_active(true);
-                // let mut mouse = mouse.clone();
-                // let rect_theme = theme.rect.get(WidgetVariant::Normal, true);
-
-                if rect.contains(cursor_pos) {
-                    let cursor_pos = [
-                        cursor_pos.x - rect.x0 + self.content.hscroll_offset - self.content.alignment_offset,
-                        cursor_pos.x - rect.y0,
-                    ];
-
-                    // mouse_pos += Vec2::new(self.hscroll_offset - self.alignment_offset, 0.0);
-
-                    // if !mouse.focus {
-                    // }
-                    self.content.was_focused_from_click = true;
-                    // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-                    self.content.editor.click(cursor_pos, input_state.mods);
-
-                    return (InputReturn { demand_focus: true }, None);
-                }
-
-                // ctx.request_paint();
-            }
-            CursorInput::Move => {
-                let cursor_pos = [
-                    cursor_pos.x - rect.x0 + self.content.hscroll_offset - self.content.alignment_offset,
-                    cursor_pos.y - rect.y0,
-                ];
-
-                // ctx.set_cursor(&Cursor::IBeam);
-                if input_state.mouse_down
-                    && cursor_pos[0] >= 0.
-                    && cursor_pos[1] >= 0.
-                    && cursor_pos[0] <= rect.width()
-                    && cursor_pos[1] <= rect.height()
-                {
-                    self.content.editor.drag(cursor_pos, input_state.mods);
-                }
-                // if ctx.is_active() {
-                //     // ctx.request_paint();
-                // }
-            }
-            _ => (),
-        }
-
-        Default::default()
-    }
-
-    fn handle_keyboard_input(
-        &mut self,
-        _rect: Rect,
-        input: &KeyboardInput,
-        _input_state: &InputState,
-        _theme: &Theme,
-        _focus: bool,
-    ) -> Option<()> {
-        self.content.suppress_adjust_hscroll = false;
-
-        match input {
-            KeyboardInput::KeyDown(key_event) => {
-                match key_event {
-                    // Tab and shift+tab
-                    // k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => ctx.focus_next(),
-                    // k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => ctx.focus_prev(),
-                    k_e => {
-                        if let Some(edit) = BasicTextInput.handle_event(k_e) {
-                            self.content.suppress_adjust_hscroll = matches!(edit, EditAction::SelectAll);
-                            self.content.editor.do_edit(edit);
-                            self.content.editor.update();
-                            // an explicit request update in case the selection
-                            // state has changed, but the data hasn't.
-                            // ctx.request_update();
-                            // ctx.request_paint();
-                        }
-                    }
-                };
-                // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-                // ctx.request_paint();
-            }
-        }
-
-        None
-    }
-
-    // fn handle_input(
-    //     &mut self,
-    //     rect: Rect,
-    //     input: &Input,
-    //     input_state: &InputState,
-    //     theme: &Theme,
-    //     _: bool,
-    // ) -> InputReturn {
-    //     self.suppress_adjust_hscroll = false;
-    //     match input {
-    //         &Input::MouseDown { pos: mouse_pos, button } => {
-    //             // ctx.request_focus();
-    //             // ctx.set_active(true);
-    //             // let mut mouse = mouse.clone();
-    //             let rect_theme = theme.rect.get(WidgetVariant::Normal, true);
-
-    //             if rect.contains(mouse_pos) {
-    //                 let mouse_pos = [
-    //                     mouse_pos.x - rect.x0
-    //                         + self.hscroll_offset - self.alignment_offset,
-    //                     mouse_pos.x - rect.y0,
-    //                 ];
-
-    //                 // mouse_pos += Vec2::new(self.hscroll_offset - self.alignment_offset, 0.0);
-
-    //                 // if !mouse.focus {
-    //                 // }
-    //                 self.was_focused_from_click = true;
-    //                 // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-    //                 self.editor.click(mouse_pos, input_state.mods);
-
-    //                 return InputReturn { demand_focus: true };
-    //             }
-
-    //             // ctx.request_paint();
-    //         }
-    //         Input::MouseMove { pos: mouse_pos } => {
-    //             let mouse_pos = [
-    //                 mouse_pos.x - rect.x0
-    //                     + self.hscroll_offset - self.alignment_offset,
-    //                 mouse_pos.y - rect.y0,
-    //             ];
-
-    //             // ctx.set_cursor(&Cursor::IBeam);
-    //             if
-    //                 input_state.mouse_down
-    //                     && mouse_pos[0] >= 0.
-    //                     && mouse_pos[1] >= 0.
-    //                     && mouse_pos[0] <= rect.width()
-    //                     && mouse_pos[1] <= rect.height()
-    //             {
-    //                 self.editor.drag(mouse_pos, input_state.mods);
-    //             }
-    //             // if ctx.is_active() {
-    //             //     // ctx.request_paint();
-    //             // }
-    //         }
-    //         // Input::MouseUp { pos, button } => {
-    //         //     if ctx.is_active() {
-    //         //         ctx.set_active(false);
-    //         //         // ctx.request_paint();
-    //         //     }
-    //         // }
-
-    //         // Event::Timer(id) => {
-    //         //     if *id == self.cursor_timer {
-    //         //         self.cursor_on = !self.cursor_on;
-    //         //         ctx.request_paint();
-    //         //         self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
-    //         //     }
-    //         // }
-    //         // Event::Command(ref cmd) if ctx.is_focused() && cmd.is(crate::commands::COPY) => {
-    //         //     self.editor.copy(data);
-    //         //     ctx.set_handled();
-    //         // }
-    //         // Event::Command(ref cmd) if ctx.is_focused() && cmd.is(crate::commands::CUT) => {
-    //         //     self.editor.cut(data);
-    //         //     ctx.set_handled();
-    //         // }
-    //         // Event::Command(cmd) if cmd.is(TextBox::PERFORM_EDIT) => {
-    //         //     let edit = cmd.get_unchecked(TextBox::PERFORM_EDIT);
-    //         //     self.editor.do_edit(edit.to_owned(), data);
-    //         // }
-    //         // Event::Paste(ref item) => {
-    //         //     if let Some(string) = item.get_string() {
-    //         //         self.editor.paste(string, data);
-    //         //     }
-    //         // }
-    //         Input::KeyDown(key_event) => {
-    //             match key_event {
-    //                 // Tab and shift+tab
-    //                 // k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => ctx.focus_next(),
-    //                 // k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => ctx.focus_prev(),
-    //                 k_e => {
-    //                     if let Some(edit) = BasicTextInput.handle_event(k_e) {
-    //                         self.suppress_adjust_hscroll = matches!(edit, EditAction::SelectAll);
-    //                         self.editor.do_edit(edit);
-    //                         self.editor.update();
-    //                         // an explicit request update in case the selection
-    //                         // state has changed, but the data hasn't.
-    //                         // ctx.request_update();
-    //                         // ctx.request_paint();
-    //                     }
-    //                 }
-    //             };
-    //             // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-    //             // ctx.request_paint();
-    //         }
-    //         _ => (),
-    //     }
-
-    //     Default::default()
-    // }
 }
 
 /*

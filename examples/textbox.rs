@@ -1,28 +1,55 @@
-use egrikor::ft_row;
-use egrikor::widgets::button::checkbox_elem;
-use egrikor::widgets::contextualize;
-use egrikor::widgets::lists::row::row;
-use egrikor::widgets::lists::{expand, ListContent};
+#![feature(type_alias_impl_trait)]
+#![feature(generic_associated_types)]
+
+use egrikor::widgets::stateful_widget::{stateful_widget, WidgetState};
+// use egrikor::ft_row;
+// use egrikor::widgets::button::checkbox_elem;
+// use egrikor::widgets::contextualize;
+// use egrikor::widgets::lists::row::row;
+// use egrikor::widgets::lists::{expand, ListContent};
 use egrikor::widgets::textbox::{textbox, TextBoxContent};
 use egrikor::*;
 
-fn example(state: &bool) -> impl Element<(TextBoxContent, bool)> {
-    ft_row![
-        expand(checkbox_elem(
-            *state,
-            |state: &mut (TextBoxContent, bool)| state.1 = !state.1
-        )),
-        expand(contextualize(
-            |s: &mut (TextBoxContent, bool)| &mut s.0,
-            textbox(),
-        )),
-    ]
+// fn example(state: &bool) -> impl Element<(TextBoxContent, bool)> {
+//     ft_row![
+//         expand(checkbox_elem(
+//             *state,
+//             |state: &mut (TextBoxContent, bool)| state.1 = !state.1
+//         )),
+//         expand(contextualize(
+//             |s: &mut (TextBoxContent, bool)| &mut s.0,
+//             textbox(),
+//         )),
+//     ]
+// }
+
+struct MyState {
+    content: TextBoxContent,
+}
+
+impl WidgetState for MyState {
+    type Widget<'a> = impl Widget + 'a;
+    type WidgetState = <Self::Widget<'static> as Widget>::State;
+
+    fn init_state() -> Self {
+        MyState { content: TextBoxContent::new() }
+    }
+
+    fn build<'a>(&'a mut self) -> Self::Widget<'a> {
+        textbox(&mut self.content)
+    }
+}
+
+fn example() -> impl Widget {
+    stateful_widget::<MyState>()
+    // stateful_widget(|| TextBoxContent::new(), |s| textbox(s))
 }
 
 fn main() {
     run(
         "elements",
-        (TextBoxContent::new(), false),
-        move |state| example(&state.1),
+        example(),
+        // (TextBoxContent::new(), false),
+        // move |state| example(&state.1),
     );
 }
