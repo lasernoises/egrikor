@@ -2,6 +2,7 @@
 #![feature(generic_associated_types)]
 
 use egrikor::widgets::stateful_widget::{stateful_widget, WidgetState};
+use egrikor::widgets::lists::{FlexContent, item};
 // use egrikor::ft_row;
 // use egrikor::widgets::button::checkbox_elem;
 // use egrikor::widgets::contextualize;
@@ -24,7 +25,8 @@ use egrikor::*;
 // }
 
 struct MyState {
-    content: TextBoxContent,
+    a: TextBoxContent,
+    b: TextBoxContent,
 }
 
 impl WidgetState for MyState {
@@ -32,11 +34,14 @@ impl WidgetState for MyState {
     type WidgetState = <Self::Widget<'static> as Widget>::State;
 
     fn init_state() -> Self {
-        MyState { content: TextBoxContent::new() }
+        MyState { a: TextBoxContent::new(), b: TextBoxContent::new() }
     }
 
     fn build<'a>(&'a mut self) -> Self::Widget<'a> {
-        textbox(&mut self.content)
+        row_widget![
+            item(textbox(&mut self.a), false),
+            item(textbox(&mut self.b), true),
+        ]
     }
 }
 
