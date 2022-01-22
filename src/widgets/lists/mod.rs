@@ -10,9 +10,10 @@ macro_rules! list_content {
     () => {
         $crate::widgets::lists::EmptyFlexContent
     };
-    ($($e:expr),+ $(,)?) => {
+    ($($e:expr),+ $(,)?) => {{
+        use $crate::widgets::lists::FlexContent;
         $crate::widgets::lists::EmptyFlexContent $(.then($e))*
-    };
+    }};
 }
 
 pub trait FlexContent {

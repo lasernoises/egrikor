@@ -2,7 +2,7 @@
 #![feature(generic_associated_types)]
 
 use egrikor::widgets::stateful_widget::{stateful_widget, WidgetState};
-use egrikor::widgets::lists::{FlexContent, item};
+use egrikor::widgets::lists::item;
 // use egrikor::ft_row;
 // use egrikor::widgets::button::checkbox_elem;
 // use egrikor::widgets::contextualize;
