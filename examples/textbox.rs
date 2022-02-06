@@ -9,6 +9,7 @@ use egrikor::widgets::lists::item;
 // use egrikor::widgets::lists::row::row;
 // use egrikor::widgets::lists::{expand, ListContent};
 use egrikor::widgets::textbox::{textbox, TextBoxContent};
+use egrikor::widgets::drawables::text;
 use egrikor::*;
 
 // fn example(state: &bool) -> impl Element<(TextBoxContent, bool)> {
@@ -39,7 +40,8 @@ impl WidgetState for MyState {
 
     fn build<'a>(&'a mut self) -> Self::Widget<'a> {
         row_widget![
-            item(textbox(&mut self.a), false),
+            item(textbox(&mut self.a), true),
+            item(text("Hello"), true),
             item(textbox(&mut self.b), true),
         ]
     }
@@ -52,7 +54,7 @@ fn example() -> impl Widget {
 
 fn main() {
     run(
-        "elements",
+        "TextBox",
         example(),
         // (TextBoxContent::new(), false),
         // move |state| example(&state.1),
