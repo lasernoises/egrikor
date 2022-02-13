@@ -160,77 +160,76 @@ impl Widget for TextWidget {
 //     type Widget = Checkmark;
 // }
 
-// pub struct Checkmark();
+pub struct Checkmark(pub Size);
 
-// /// Much like the [FixedRect] the [Checkmark] also only has a fixed size, but it also renders a
-// /// checkmark (as the name suggests).
-// impl Widget for Checkmark {
-//     type Params = CheckmarkElem;
-//     type Event = ();
+/// Much like the [FixedRect] the [Checkmark] also only has a fixed size, but it also renders a
+/// checkmark (as the name suggests).
+impl Widget for Checkmark {
+    type State = ();
+    type Event = ();
 
-//     fn build(
-//         params: &mut Self::Params,
-//         constraint: LayoutConstraint,
-//         renderer: &mut Piet,
-//         theme: &Theme,
-//     ) -> Self {
-//         Checkmark()
-//     }
+    fn build(
+        &mut self,
+        _constraint: LayoutConstraint,
+        _renderer: &mut Piet,
+        _theme: &Theme,
+    ) -> Self::State {}
 
-//     fn update(
-//         &mut self,
-//         params: &mut Self::Params,
-//         constraint: LayoutConstraint,
-//         renderer: &mut Piet,
-//         theme: &Theme,
-//     ) {}
+    fn update(
+        &mut self,
+        _params: &mut Self::State,
+        _constraint: LayoutConstraint,
+        _renderer: &mut Piet,
+        _theme: &Theme,
+    ) {}
 
-//     // fn measure(
-//     //     &mut self,
-//     //     _max_size: [Option<f64>; 2],
-//     //     _renderer: &mut Piet,
-//     //     _theme: &Theme,
-//     //     _: &mut C,
-//     // ) -> Size {
-//     //     self.0
-//     // }
+    // fn measure(
+    //     &mut self,
+    //     _max_size: [Option<f64>; 2],
+    //     _renderer: &mut Piet,
+    //     _theme: &Theme,
+    //     _: &mut C,
+    // ) -> Size {
+    //     self.0
+    // }
 
-//     // This will always be called after measure.
-//     fn min_size(&self) -> Size {
-//         self.0
-//     }
+    // This will always be called after measure.
+    fn min_size(&self, state: &Self::State) -> Size {
+        self.0
+    }
 
-//     /// These are the extra layers (there is always one at least from the perspective of a widget).
-//     /// Layers are relative a widget in layer 1 will not know that there's stuff below.
-//     /// Containers must return the max of their children here.
-//     fn extra_layers(&self) -> u8 {
-//         0
-//     }
+    /// These are the extra layers (there is always one at least from the perspective of a widget).
+    /// Layers are relative a widget in layer 1 will not know that there's stuff below.
+    /// Containers must return the max of their children here.
+    fn extra_layers(&self, state: &Self::State) -> u8 {
+        0
+    }
 
-//     /// Single-layer widgets can just ignore the `layer` parameter since `render` they should only
-//     /// be called for layers a widget actually has.
-//     fn render(
-//         &mut self,
-//         rect: Rect,
-//         renderer: &mut Piet,
-//         _: &Theme,
-//         _: &InputState,
-//         _: u8,
-//         _: bool,
-//     ) {
-//         let rect = Rect::from_center_size(rect.center(), self.0).inset(4.);
+    /// Single-layer widgets can just ignore the `layer` parameter since `render` they should only
+    /// be called for layers a widget actually has.
+    fn render(
+        &mut self,
+        _state: &mut Self::State,
+        rect: Rect,
+        renderer: &mut Piet,
+        _: &Theme,
+        _: &InputState,
+        _: u8,
+        _: bool,
+    ) {
+        let rect = Rect::from_center_size(rect.center(), self.0).inset(4.);
 
-//         renderer.stroke(
-//             BezPath::from_vec(vec![
-//                 PathEl::MoveTo((rect.x0, rect.y0 + rect.height() / 2.).into()),
-//                 PathEl::LineTo((rect.x0 + rect.width() / 3., rect.y1 - rect.height() / 6.).into()),
-//                 PathEl::LineTo((rect.x1, rect.y0 + rect.height() / 6.).into()),
-//             ]),
-//             &Color::Rgba32(0xFF_FF_FF_FF),
-//             4.0,
-//         );
-//     }
-// }
+        renderer.stroke(
+            BezPath::from_vec(vec![
+                PathEl::MoveTo((rect.x0, rect.y0 + rect.height() / 2.).into()),
+                PathEl::LineTo((rect.x0 + rect.width() / 3., rect.y1 - rect.height() / 6.).into()),
+                PathEl::LineTo((rect.x1, rect.y0 + rect.height() / 6.).into()),
+            ]),
+            &Color::Rgba32(0xFF_FF_FF_FF),
+            4.0,
+        );
+    }
+}
 
 // pub fn fixed_rect_elem<'a>(size: Size) -> impl WidgetParams {
 //     FixedRectParams(size)
@@ -243,7 +242,32 @@ impl Widget for TextWidget {
 // }
 
 
-// pub struct FixedRect();
+pub struct FixedRect(pub Size);
+
+impl Widget for FixedRect {
+    type State = ();
+    type Event = ();
+
+    fn build(
+        &mut self,
+        constraint: LayoutConstraint,
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) -> Self::State {}
+
+    fn update(
+        &mut self,
+        state: &mut Self::State,
+        constraint: LayoutConstraint,
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) {}
+
+    fn min_size(&self, state: &Self::State) -> Size {
+        self.0
+    }
+
+}
 
 // /// Much like the [FixedRect] the [Checkmark] also only has a fixed size, but it also renders a
 // /// checkmark (as the name suggests).

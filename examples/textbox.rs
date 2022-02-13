@@ -1,6 +1,7 @@
 #![feature(type_alias_impl_trait)]
 #![feature(generic_associated_types)]
 
+use egrikor::widgets::checkbox::checkbox;
 use egrikor::widgets::stateful_widget::{stateful_widget, WidgetState};
 use egrikor::widgets::lists::item;
 // use egrikor::ft_row;
@@ -28,6 +29,7 @@ use egrikor::*;
 struct MyState {
     a: TextBoxContent,
     b: TextBoxContent,
+    checked: bool,
 }
 
 impl WidgetState for MyState {
@@ -35,7 +37,7 @@ impl WidgetState for MyState {
     type WidgetState = <Self::Widget<'static> as Widget>::State;
 
     fn init_state() -> Self {
-        MyState { a: TextBoxContent::new(), b: TextBoxContent::new() }
+        MyState { a: TextBoxContent::new(), b: TextBoxContent::new(), checked: false }
     }
 
     fn build<'a>(&'a mut self) -> Self::Widget<'a> {
@@ -43,6 +45,7 @@ impl WidgetState for MyState {
             item(textbox(&mut self.a), true),
             item(text("Hello"), true),
             item(textbox(&mut self.b), true),
+            item(checkbox(&mut self.checked), false)
         ]
     }
 }

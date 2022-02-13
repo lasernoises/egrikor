@@ -3,14 +3,14 @@ use std::fmt::Debug;
 use druid_shell::kurbo::{Point, Rect, Size};
 use piet_common::Piet;
 
-use super::drawables::{checkmark_elem, fixed_rect_elem};
-use super::or::OrElem;
+// use super::drawables::{checkmark_elem, fixed_rect_elem};
+// use super::or::OrElem;
 use super::*;
 use crate::*;
 
-pub struct Button<D> {
+pub struct ButtonState<S> {
     pub variant: WidgetVariant,
-    pub drawable: D,
+    pub state: S,
     pub layout: Size,
 }
 
@@ -18,70 +18,78 @@ pub struct Button<D> {
 pub enum ButtonEvent {
     Click,
 }
-pub struct ButtonElem<E, H> {
-    element: E,
-    on_click: H,
+pub struct Button<E, H> {
+    pub widget: E,
+    pub on_click: H,
 }
 
-impl<'a, E: WidgetParams, H: Fn() + 'a> WidgetParams for ButtonElem<E, H> {
-    type Widget = Button<E::Widget>;
-}
+// impl<'a, E: WidgetParams, H: Fn() + 'a> WidgetParams for ButtonElem<E, H> {
+//     type Widget = Button<E::Widget>;
+// }
 
-impl<D: Widget, H: FnMut()> Widget for Button<D> {
-    type Params = ButtonElem<D::Params, H>;
+impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
+    // type Params = Button<D::Params, H>;
+    type State = ButtonState<D::State>;
     type Event = ButtonEvent;
 
     fn build(
-        params: &mut Self::Params,
+        &mut self,
         max_size: [Option<f64>; 2],
         renderer: &mut Piet,
         theme: &Theme,
-    ) -> Self {
+    ) -> Self::State {
         // let rect_theme = theme.rect.get(self.variant, true);
-        let mut drawable = params.element.build(
-            max_size,
+        let mut state = self.widget.build(
+            [
+                max_size[0].map(|w| 0f64.max(w - PADDING)),
+                max_size[1].map(|h| 0f64.max(h - PADDING)),
+            ],
             renderer,
             theme,
         );
 
-        let layout = measure_rect(&mut drawable, max_size, renderer, theme);
+        let layout = self.widget.min_size(&state) + Size::new(PADDING * 2., PADDING * 2.);
 
-        Button {
+        ButtonState {
             variant: WidgetVariant::Normal,
-            drawable,
+            state,
             layout,
         }
     }
 
     fn update(
         &mut self,
-        params: &mut Self::Params,
+        state: &mut Self::State,
         max_size: [Option<f64>; 2],
         renderer: &mut Piet,
         theme: &Theme,
     ) {
-        self.drawable.update(
-            params.element,
-            max_size,
+        self.widget.update(
+            &mut state.state,
+            [
+                max_size[0].map(|w| 0f64.max(w - PADDING)),
+                max_size[1].map(|h| 0f64.max(h - PADDING)),
+            ],
             renderer,
             theme,
         );
 
         // TODO: These fields are kinda redundant.
-        self.layout = measure_rect(&mut self.drawable, max_size, renderer, theme);
-        self.on_click = self.on_click;
+        state.layout = self.widget.min_size(&mut state.state) + Size::new(PADDING * 2., PADDING * 2.);
+        // self.on_click = self.on_click;
     }
 
-    fn min_size(&self) -> Size {
-        self.layout
+    fn min_size(&self, state: &Self::State) -> Size {
+        state.layout
     }
 
-    fn extra_layers(&self) -> u8 {
+    fn extra_layers(&self, state: &Self::State) -> u8 {
         0
     }
 
     fn render(
         &mut self,
+        state: &mut Self::State,
         rect: Rect,
         renderer: &mut Piet,
         theme: &Theme,
@@ -89,10 +97,20 @@ impl<D: Widget, H: FnMut()> Widget for Button<D> {
         layer: u8,
         focus: bool,
     ) {
+        // self.widget.render(
+        //     &mut state.state,
+        //     rect.inset(-PADDING),
+        //     renderer,
+        //     theme,
+        //     input_state,
+        //     layer,
+        //     focus,
+        // );
         render_rect(
             false,
             true,
-            &mut self.drawable,
+            &mut self.widget,
+            &mut state.state,
             rect,
             renderer,
             theme,
@@ -104,6 +122,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D> {
 
     fn handle_cursor_input(
         &mut self,
+        state: &mut Self::State,
         rect: Rect,
         cursor_pos: Point,
         _cursor_layer: u8,
@@ -221,31 +240,31 @@ impl<D: Widget, H: FnMut()> Widget for Button<D> {
 //     }
 // }
 
-pub fn button_elem<'a, E: WidgetParams>(
-    element: E,
-    on_click: impl Fn() + 'a,
-) -> impl WidgetParams {
-    ButtonElem { element, on_click }
-}
+// pub fn button_elem<'a, E: WidgetParams>(
+//     element: E,
+//     on_click: impl Fn() + 'a,
+// ) -> impl WidgetParams {
+//     ButtonElem { element, on_click }
+// }
 
-pub fn text_button_elem<'a>(
-    text: &'static str,
-    on_click: impl Fn() + 'a,
-) -> impl WidgetParams + 'a {
-    button_elem(super::drawables::text_elem(text), on_click)
-}
+// pub fn text_button_elem<'a>(
+//     text: &'static str,
+//     on_click: impl Fn() + 'a,
+// ) -> impl WidgetParams + 'a {
+//     button_elem(super::drawables::text_elem(text), on_click)
+// }
 
-pub fn checkbox_elem(checked: bool, on_click: impl Fn()) -> impl WidgetParams<'static> {
-    button_elem(
-        if checked {
-            // Sadly rust doesn't seem to be able to infer this.
-            OrElem/*::<_, _, NoneWidget, NoneWidget>*/::A(checkmark_elem(Size::new(12., 12.)))
-        } else {
-            OrElem::B(fixed_rect_elem(Size::new(12., 12.)))
-        },
-        on_click,
-    )
-}
+// pub fn checkbox_elem(checked: bool, on_click: impl Fn()) -> impl WidgetParams<'static> {
+//     button_elem(
+//         if checked {
+//             // Sadly rust doesn't seem to be able to infer this.
+//             OrElem/*::<_, _, NoneWidget, NoneWidget>*/::A(checkmark_elem(Size::new(12., 12.)))
+//         } else {
+//             OrElem::B(fixed_rect_elem(Size::new(12., 12.)))
+//         },
+//         on_click,
+//     )
+// }
 
 // pub fn text_button_elem(
 //     text: &'static str,

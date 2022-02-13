@@ -2,6 +2,9 @@
 // pub mod drawables;
 // pub mod or;
 pub mod drawables;
+pub mod button;
+pub mod checkbox;
+pub mod or;
 pub mod lists;
 pub mod textbox;
 pub mod stateful_widget;
@@ -40,13 +43,15 @@ pub const BORDER_WIDTH: f64 = 2.0;
 
 pub const BORDER_COLOR: u32 = 0xFF_FF_FF_FF;
 
-// pub fn measure_rect<D: Widget>(
-//     drawable: &mut D,
+// pub fn measure_rect<W: Widget>(
+//     widget: &mut W,
+//     state: &mut W::State,
 //     max_size: [Option<f64>; 2],
 //     renderer: &mut Piet,
 //     theme: &Theme,
 // ) -> Size {
-//     drawable.measure(
+//     widget.measure(
+//         state,
 //         [
 //             max_size[0].map(|w| 0f64.max(w - PADDING)),
 //             max_size[1].map(|h| 0f64.max(h - PADDING)),
@@ -56,51 +61,53 @@ pub const BORDER_COLOR: u32 = 0xFF_FF_FF_FF;
 //     ) + Size::new(PADDING * 2., PADDING * 2.)
 // }
 
-// pub fn render_rect<D: Widget>(
-//     border: bool,
-//     hover: bool,
+pub fn render_rect<D: Widget>(
+    border: bool,
+    hover: bool,
 
-//     drawable: &mut D,
-//     rect: Rect,
-//     renderer: &mut Piet,
-//     theme: &Theme,
-//     input_state: &InputState,
-//     layer: u8,
-//     focus: bool,
-// ) {
-//     if layer == 0 {
-//         let hover = hover
-//             && if let Some(point) = input_state.cursor_pos {
-//                 rect.contains(point)
-//             } else {
-//                 false
-//             };
+    widget: &mut D,
+    state: &mut D::State,
+    rect: Rect,
+    renderer: &mut Piet,
+    theme: &Theme,
+    input_state: &InputState,
+    layer: u8,
+    focus: bool,
+) {
+    if layer == 0 {
+        let hover = hover
+            && if let Some(point) = input_state.cursor_pos {
+                rect.contains(point)
+            } else {
+                false
+            };
 
-//         let brush = &renderer.solid_brush(piet_common::Color::Rgba32(
-//             match (hover, input_state.mouse_down) {
-//                 (true, true) => COLOR_DOWN,
-//                 (true, false) => COLOR_HOVER,
-//                 (false, _) => COLOR,
-//             },
-//         ));
-//         renderer.fill(rect, brush);
+        let brush = &renderer.solid_brush(piet_common::Color::Rgba32(
+            match (hover, input_state.mouse_down) {
+                (true, true) => COLOR_DOWN,
+                (true, false) => COLOR_HOVER,
+                (false, _) => COLOR,
+            },
+        ));
+        renderer.fill(rect, brush);
 
-//         if border {
-//             let rect_pos = (rect.x0 + BORDER_WIDTH / 2.0, rect.y0 + BORDER_WIDTH / 2.0);
-//             let rect_size = (rect.width() - BORDER_WIDTH, rect.height() - BORDER_WIDTH);
-//             let rect_shape = kurbo::Rect::from_origin_size(rect_pos, rect_size);
+        if border {
+            let rect_pos = (rect.x0 + BORDER_WIDTH / 2.0, rect.y0 + BORDER_WIDTH / 2.0);
+            let rect_size = (rect.width() - BORDER_WIDTH, rect.height() - BORDER_WIDTH);
+            let rect_shape = kurbo::Rect::from_origin_size(rect_pos, rect_size);
 
-//             let brush = renderer.solid_brush(piet_common::Color::Rgba32(BORDER_COLOR));
-//             renderer.stroke(rect_shape, &brush, BORDER_WIDTH);
-//         }
-//     }
+            let brush = renderer.solid_brush(piet_common::Color::Rgba32(BORDER_COLOR));
+            renderer.stroke(rect_shape, &brush, BORDER_WIDTH);
+        }
+    }
 
-//     drawable.render(
-//         rect.inset(-PADDING),
-//         renderer,
-//         theme,
-//         input_state,
-//         layer,
-//         focus,
-//     );
-// }
+    widget.render(
+        state,
+        rect.inset(-PADDING),
+        renderer,
+        theme,
+        input_state,
+        layer,
+        focus,
+    );
+}
