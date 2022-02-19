@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use crate::*;
 
@@ -31,6 +31,40 @@ pub trait FlexContent {
 
 pub trait FlexContentHandler {
     fn widget<W: Widget>(&mut self, widget: &mut W, state: &mut Option<W::State>, expand: bool);
+}
+
+pub trait DynFlexContentHandler {
+    fn w(&mut self, widget: &mut dyn WidgetWithState, expand: bool);
+}
+
+impl<H: FlexContentHandler> DynFlexContentHandler for H {
+    fn w(&mut self, mut widget: &mut dyn WidgetWithState, expand: bool) {
+        self.widget(&mut widget, &mut Some(()), expand);
+    }
+}
+
+pub struct ClosureWidgetContent<S, C> {
+    closure: C,
+    state: PhantomData<S>,
+}
+
+impl<S, C: FnMut(&mut dyn DynFlexContentHandler, &mut S)> ClosureWidgetContent<S, C> {
+    pub fn new(content: C) -> Self {
+        ClosureWidgetContent {
+            closure: content,
+            state: PhantomData,
+        }
+    }
+} 
+
+impl<S, C> FlexContent for ClosureWidgetContent<S, C>
+    where S: FlexContentState, C: FnMut(&mut dyn DynFlexContentHandler, &mut S)
+{
+    type State = S;
+
+    fn all<H: FlexContentHandler>(&mut self, state: &mut Self::State, handler: &mut H) {
+        (self.closure)(handler, state);
+    }
 }
 
 pub trait FlexContentState {

@@ -2,15 +2,16 @@
 #![feature(generic_associated_types)]
 
 use egrikor::widgets::checkbox::checkbox;
+use egrikor::widgets::lists::FlexContentState;
+use egrikor::widgets::lists::{item, ClosureWidgetContent, row::row};
 use egrikor::widgets::stateful_widget::{stateful_widget, WidgetState};
-use egrikor::widgets::lists::item;
 // use egrikor::ft_row;
 // use egrikor::widgets::button::checkbox_elem;
 // use egrikor::widgets::contextualize;
 // use egrikor::widgets::lists::row::row;
 // use egrikor::widgets::lists::{expand, ListContent};
-use egrikor::widgets::textbox::{textbox, TextBoxContent};
 use egrikor::widgets::drawables::text;
+use egrikor::widgets::textbox::{textbox, TextBoxContent, TextBox};
 use egrikor::*;
 
 // fn example(state: &bool) -> impl Element<(TextBoxContent, bool)> {
@@ -45,15 +46,34 @@ impl WidgetState for MyState {
     }
 
     fn build<'a>(&'a mut self) -> Self::Widget<'a> {
-        row_widget![
-            item(textbox(&mut self.a), true),
-            item(text("Hello"), true),
-            item(textbox(&mut self.b), true),
-            item(
-                checkbox(self.checked, || self.checked = !self.checked),
-                false,
-            ),
-        ]
+        struct State {
+            a: Option<TextBox>,
+            b: Option<TextBox>,
+        }
+
+        impl FlexContentState for State {
+            fn new() -> Self {
+                State {
+                    a: None,
+                    b: None,
+                }
+            }
+        }
+
+        row(ClosureWidgetContent::new(|h, s: &mut State| {
+            h.w(&mut (textbox(&mut self.a), &mut s.a), true);
+            h.w(&mut (textbox(&mut self.a), &mut s.b), true);
+        }))
+        // row_widget![
+        //     item(textbox(&mut self.a), true),
+        //     item(text("Hello"), true),
+        //     item(textbox(&mut self.b), true),
+        //     item(
+        //         checkbox(self.checked, || self.checked = !self.checked),
+        //         false,
+        //     ),
+        //     // item(checkbox(self.checked, || self.checked = !self.checked), false),
+        // ]
     }
 }
 

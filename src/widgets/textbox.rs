@@ -28,7 +28,7 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 // const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete-editing");
 // const CANCEL_EDITING: Selector = Selector::new("druid.builtin.textbox-cancel-editing");
 
-pub fn textbox<'a>(content: &'a mut TextBoxContent) -> impl Widget + 'a {
+pub fn textbox<'a>(content: &'a mut TextBoxContent) -> impl Widget<State = TextBox> + 'a {
     TextBoxParams(content)
 }
 

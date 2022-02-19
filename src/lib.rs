@@ -170,6 +170,232 @@ pub trait Widget {
     }
 }
 
+/// For those cases where you need Widgets in a dyn context.
+pub trait WidgetWithState {
+    fn layout(&mut self, constraint: LayoutConstraint, renderer: &mut Piet, theme: &Theme);
+
+    fn min_size(&self) -> Size;
+
+    fn extra_layers(&self) -> u8;
+
+    fn render(
+        &mut self,
+        rect: Rect,
+        renderer: &mut Piet,
+        theme: &Theme,
+        input_state: &InputState,
+        layer: u8,
+        focus: bool,
+    );
+
+    fn test_input_pos_layer(&mut self, rect: Rect, input_pos: Point) -> Option<u8>;
+
+    fn handle_cursor_input(
+        &mut self,
+        rect: Rect,
+        cursor_pos: Point,
+        cursor_layer: u8,
+        input: CursorInput,
+        input_state: &InputState,
+        theme: &Theme,
+        focus: bool,
+    ) -> InputReturn;
+
+    fn handle_keyboard_input(
+        &mut self,
+        rect: Rect,
+        input: &KeyboardInput,
+        input_state: &InputState,
+        theme: &Theme,
+        focus: bool,
+    );
+}
+
+impl<'a, S, W: Widget<State = S>> WidgetWithState for (W, &'a mut Option<S>) {
+    fn layout(&mut self, constraint: LayoutConstraint, renderer: &mut Piet, theme: &Theme) {
+        if let Some(state) = self.1 {
+            self.0.update(state, constraint, renderer, theme);
+        } else {
+            *self.1 = Some(self.0.build(constraint, renderer, theme));
+        }
+    }
+
+    fn min_size(&self) -> Size {
+        self.0.min_size(self.1.as_ref().unwrap())
+    }
+
+    fn extra_layers(&self) -> u8 {
+        self.0.extra_layers(self.1.as_ref().unwrap())
+    }
+
+    fn render(
+        &mut self,
+        rect: Rect,
+        renderer: &mut Piet,
+        theme: &Theme,
+        input_state: &InputState,
+        layer: u8,
+        focus: bool,
+    ) {
+        self.0.render(
+            self.1.as_mut().unwrap(),
+            rect,
+            renderer,
+            theme,
+            input_state,
+            layer,
+            focus,
+        );
+    }
+
+    fn test_input_pos_layer(&mut self, rect: Rect, input_pos: Point) -> Option<u8> {
+        self.0
+            .test_input_pos_layer(self.1.as_mut().unwrap(), rect, input_pos)
+    }
+
+    fn handle_cursor_input(
+        &mut self,
+        rect: Rect,
+        cursor_pos: Point,
+        cursor_layer: u8,
+        input: CursorInput,
+        input_state: &InputState,
+        theme: &Theme,
+        focus: bool,
+    ) -> InputReturn {
+        self.0
+            .handle_cursor_input(
+                self.1.as_mut().unwrap(),
+                rect,
+                cursor_pos,
+                cursor_layer,
+                input,
+                input_state,
+                theme,
+                focus,
+            )
+            .0
+    }
+
+    fn handle_keyboard_input(
+        &mut self,
+        rect: Rect,
+        input: &KeyboardInput,
+        input_state: &InputState,
+        theme: &Theme,
+        focus: bool,
+    ) {
+        self.0.handle_keyboard_input(
+            self.1.as_mut().unwrap(),
+            rect,
+            input,
+            input_state,
+            theme,
+            focus,
+        );
+    }
+}
+
+impl<'a> Widget for &'a mut dyn WidgetWithState {
+    type State = ();
+    type Event = ();
+
+    fn build(
+        &mut self,
+        constraint: LayoutConstraint,
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) -> Self::State {
+        self.layout(constraint, renderer, theme);
+    }
+
+    fn update(
+        &mut self,
+        state: &mut Self::State,
+        constraint: LayoutConstraint,
+        renderer: &mut Piet,
+        theme: &Theme,
+    ) {
+        self.layout(constraint, renderer, theme);
+    }
+
+    fn min_size(&self, state: &Self::State) -> Size {
+        (**self).min_size()
+        // <&mut dyn WidgetWithState>::min_size(self)
+        // self.min_size()
+    }
+
+    fn extra_layers(&self, state: &Self::State) -> u8 {
+        (**self).extra_layers()
+    }
+
+    fn render(
+        &mut self,
+        _state: &mut Self::State,
+        rect: Rect,
+        renderer: &mut Piet,
+        theme: &Theme,
+        input_state: &InputState,
+        layer: u8,
+        focus: bool,
+    ) {
+        (**self).render(rect, renderer, theme, input_state, layer, focus);
+    }
+
+    fn test_input_pos_layer(
+        &mut self,
+        _state: &mut Self::State,
+        rect: Rect,
+        input_pos: Point,
+    ) -> Option<u8> {
+        (**self).test_input_pos_layer(rect, input_pos)
+    }
+
+    fn handle_cursor_input(
+        &mut self,
+        _state: &mut Self::State,
+        rect: Rect,
+        cursor_pos: Point,
+        cursor_layer: u8,
+        input: CursorInput,
+        input_state: &InputState,
+        theme: &Theme,
+        focus: bool,
+    ) -> (InputReturn, Option<Self::Event>) {
+        (
+            (**self).handle_cursor_input(
+                rect,
+                cursor_pos,
+                cursor_layer,
+                input,
+                input_state,
+                theme,
+                focus,
+            ),
+            None,
+        )
+    }
+
+    fn handle_keyboard_input(
+        &mut self,
+        _state: &mut Self::State,
+        rect: Rect,
+        input: &KeyboardInput,
+        input_state: &InputState,
+        theme: &Theme,
+        focus: bool,
+    ) -> Option<Self::Event> {
+        (**self).handle_keyboard_input(
+            rect,
+            input,
+            input_state,
+            theme,
+            focus,
+        );
+        None
+    }
+}
+
 pub struct WindowHandler<W: Widget> {
     widget: W,
     state: Option<W::State>,
@@ -254,7 +480,6 @@ where
 
     fn mouse_move(&mut self, event: &MouseEvent) {
         if let Some(ref mut state) = self.state {
-
             self.input_state.cursor_pos = Some(event.pos);
             self.input_state.mods = event.mods;
             let rect = Rect::from_origin_size((0., 0.), self.size);
@@ -362,10 +587,7 @@ where
     }
 }
 
-pub fn run<W: Widget + 'static>(
-    title: &str,
-    widget: W,
-) {
+pub fn run<W: Widget + 'static>(title: &str, widget: W) {
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     builder.set_title(title);
