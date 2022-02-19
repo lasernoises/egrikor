@@ -37,7 +37,11 @@ impl WidgetState for MyState {
     type WidgetState = <Self::Widget<'static> as Widget>::State;
 
     fn init_state() -> Self {
-        MyState { a: TextBoxContent::new(), b: TextBoxContent::new(), checked: false }
+        MyState {
+            a: TextBoxContent::new(),
+            b: TextBoxContent::new(),
+            checked: false,
+        }
     }
 
     fn build<'a>(&'a mut self) -> Self::Widget<'a> {
@@ -45,7 +49,10 @@ impl WidgetState for MyState {
             item(textbox(&mut self.a), true),
             item(text("Hello"), true),
             item(textbox(&mut self.b), true),
-            item(checkbox(&mut self.checked), false)
+            item(
+                checkbox(self.checked, || self.checked = !self.checked),
+                false,
+            ),
         ]
     }
 }
