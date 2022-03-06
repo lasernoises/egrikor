@@ -2,22 +2,12 @@ use piet_common::Piet;
 
 use super::*;
 
-#[macro_export]
-macro_rules! row_widget {
-    () => {
-        row(EmptyListContent)
-    };
-    ($($e:expr),+ $(,)?) => {{
-        let content = $crate::list_content![$($e),*];
-        $crate::widgets::lists::row::row(content)
-    }}
+pub fn row<'a, P, C: FlexContent<P> + 'a>(params: &'a mut P, content: C) -> impl Widget + 'a {
+    Row { params, content }
 }
 
-pub fn row<C: FlexContent>(content: C) -> impl Widget {
-    Row { content }
-}
-
-pub struct Row<C> {
+pub struct Row<'a, P, C> {
+    params: &'a mut P,
     content: C,
 }
 
@@ -34,7 +24,7 @@ pub struct RowState<S> {
     extra_layers: u8,
 }
 
-impl<C: FlexContent> Widget for Row<C> {
+impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
     type State = RowState<C::State>;
     type Event = ();
 
@@ -114,7 +104,7 @@ impl<C: FlexContent> Widget for Row<C> {
             extra_layers: 0,
         };
 
-        self.content.all(&mut state.content_state, &mut handler);
+        self.content.all(self.params, &mut state.content_state, &mut handler);
 
         state.expand_count = handler.expand_count;
         state.extra_layers = handler.extra_layers;
@@ -166,7 +156,7 @@ impl<C: FlexContent> Widget for Row<C> {
             extra_layers: state.extra_layers,
         };
 
-        self.content.all(&mut state.content_state, &mut handler);
+        self.content.all(self.params, &mut state.content_state, &mut handler);
 
         state.size = Size::new(
             constraint[0]
@@ -269,7 +259,7 @@ impl<C: FlexContent> Widget for Row<C> {
             i: 0,
         };
 
-        self.content.all(&mut state.content_state, &mut handler);
+        self.content.all(self.params, &mut state.content_state, &mut handler);
     }
 
     fn handle_cursor_input(
@@ -358,7 +348,7 @@ impl<C: FlexContent> Widget for Row<C> {
             demand_focus: false,
         };
 
-        self.content.all(&mut state.content_state, &mut handler);
+        self.content.all(self.params, &mut state.content_state, &mut handler);
 
         (
             InputReturn {
@@ -436,7 +426,7 @@ impl<C: FlexContent> Widget for Row<C> {
             i: 0,
         };
 
-        self.content.all(&mut state.content_state, &mut handler);
+        self.content.all(self.params, &mut state.content_state, &mut handler);
 
         None
     }

@@ -3,11 +3,11 @@
 
 use egrikor::widgets::checkbox::checkbox;
 use egrikor::widgets::stateful_widget::{stateful_widget, WidgetState};
-use egrikor::widgets::lists::item;
+use egrikor::widgets::lists::{FlexItemBuild, FlexItem, FlexContent};
 // use egrikor::ft_row;
 // use egrikor::widgets::button::checkbox_elem;
 // use egrikor::widgets::contextualize;
-// use egrikor::widgets::lists::row::row;
+use egrikor::widgets::lists::row::row;
 // use egrikor::widgets::lists::{expand, ListContent};
 use egrikor::widgets::textbox::{textbox, TextBoxContent};
 use egrikor::widgets::drawables::text;
@@ -45,15 +45,16 @@ impl WidgetState for MyState {
     }
 
     fn build<'a>(&'a mut self) -> Self::Widget<'a> {
-        row_widget![
-            item(textbox(&mut self.a), true),
-            item(text("Hello"), true),
-            item(textbox(&mut self.b), true),
-            item(
-                checkbox(self.checked, || self.checked = !self.checked),
-                false,
-            ),
-        ]
+        row(self, list_content!(params: MyState => [
+            checkbox(params.checked, || {
+                params.checked = !params.checked;
+            }),
+            textbox(if params.checked { &mut params.a } else { &mut params.b }),
+            textbox(if params.checked { &mut params.b } else { &mut params.a }),
+            checkbox(!params.a.text().is_empty(), || {
+                params.a.set_text(String::new());
+            }),
+        ]))
     }
 }
 

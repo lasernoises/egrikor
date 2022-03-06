@@ -6,22 +6,51 @@ pub mod col;
 pub mod row;
 
 #[macro_export]
-macro_rules! list_content {
-    () => {
-        $crate::widgets::lists::EmptyFlexContent
-    };
-    ($($e:expr),+ $(,)?) => {{
-        use $crate::widgets::lists::FlexContent;
-        $crate::widgets::lists::EmptyFlexContent $(.then($e))*
+macro_rules! flex_item {
+    ($params_var:ident: $params:ty => $build:expr) => {{
+        struct Item;
+
+        impl crate::widgets::lists::FlexItemBuild for Item {
+            type Params = $params;
+            type Widget<'a> = impl Widget + 'a;
+            type State = <Self::Widget<'static> as Widget>::State;
+
+            fn build<'a>(&self, $params_var: &'a mut $params) -> Self::Widget<'a> {
+                $build
+            }
+        }
+
+        FlexItem {
+            build: Item,
+            expand: true,
+        }
     }};
 }
 
-pub trait FlexContent {
+#[macro_export]
+macro_rules! list_content {
+    // () => {
+    //     $crate::widgets::lists::EmptyFlexContent
+    // };
+    ($params_var:ident: $params:ty => [$($build:expr),* $(,)?]) => {{
+        use $crate::widgets::lists::FlexContent;
+        $crate::widgets::lists::EmptyFlexContent $(.then(
+            crate::flex_item!($params_var: $params => $build)
+        ))*
+    }};
+}
+
+pub trait FlexContent<P> {
     type State: FlexContentState;
 
-    fn all<H: FlexContentHandler>(&mut self, state: &mut Self::State, handler: &mut H);
+    fn all<H: FlexContentHandler>(
+        &mut self,
+        params: &mut P,
+        state: &mut Self::State,
+        handler: &mut H,
+    );
 
-    fn then<O: FlexContent>(self, other: O) -> Then<Self, O>
+    fn then<O: FlexContent<P>>(self, other: O) -> Then<Self, O>
     where
         Self: Sized,
     {
@@ -37,20 +66,34 @@ pub trait FlexContentState {
     fn new() -> Self;
 }
 
-pub struct FlexItem<W> {
-    widget: W,
-    expand: bool,
+pub trait FlexItemBuild {
+    type Params;
+    type State;
+    type Widget<'a>: Widget<State = Self::State> + 'a;
+
+    fn build<'a>(&self, params: &'a mut Self::Params) -> Self::Widget<'a>;
+}
+
+pub struct FlexItem<B> {
+    pub build: B,
+    pub expand: bool,
 }
 
 pub struct FlexItemState<S> {
     state: Option<S>,
 }
 
-impl<W: Widget> FlexContent for FlexItem<W> {
-    type State = FlexItemState<W::State>;
+impl<P, B: FlexItemBuild<Params = P>> FlexContent<P> for FlexItem<B> {
+    type State = FlexItemState<B::State>;
 
-    fn all<H: FlexContentHandler>(&mut self, state: &mut Self::State, handler: &mut H) {
-        handler.widget(&mut self.widget, &mut state.state, self.expand);
+    fn all<H: FlexContentHandler>(
+        &mut self,
+        params: &mut P,
+        state: &mut Self::State,
+        handler: &mut H,
+    ) {
+        let mut widget = self.build.build(params);
+        handler.widget(&mut widget, &mut state.state, self.expand);
     }
 }
 
@@ -60,25 +103,25 @@ impl<S> FlexContentState for FlexItemState<S> {
     }
 }
 
-pub fn item<W: Widget>(widget: W, expand: bool) -> FlexItem<W> {
-    FlexItem { widget, expand }
-}
+// pub fn item<W: Widget>(widget: W, expand: bool) -> FlexItem<W> {
+//     FlexItem { widget, expand }
+// }
 
-pub fn expand<W: Widget>(widget: W) -> FlexItem<W> {
-    FlexItem {
-        widget,
-        expand: true,
-    }
-}
+// pub fn expand<W: Widget>(widget: W) -> FlexItem<W> {
+//     FlexItem {
+//         widget,
+//         expand: true,
+//     }
+// }
 
 pub struct EmptyFlexContent;
 
 pub struct EmptyFlexContentState;
 
-impl FlexContent for EmptyFlexContent {
+impl<P> FlexContent<P> for EmptyFlexContent {
     type State = EmptyFlexContentState;
 
-    fn all<H: FlexContentHandler>(&mut self, _: &mut Self::State, _: &mut H) {}
+    fn all<H: FlexContentHandler>(&mut self, _: &mut P, _: &mut Self::State, _: &mut H) {}
 }
 
 impl FlexContentState for EmptyFlexContentState {
@@ -97,12 +140,17 @@ pub struct ThenState<A, B> {
     b: B,
 }
 
-impl<A: FlexContent, B: FlexContent> FlexContent for Then<A, B> {
+impl<P, A: FlexContent<P>, B: FlexContent<P>> FlexContent<P> for Then<A, B> {
     type State = ThenState<A::State, B::State>;
 
-    fn all<H: FlexContentHandler>(&mut self, state: &mut Self::State, handler: &mut H) {
-        self.a.all(&mut state.a, handler);
-        self.b.all(&mut state.b, handler);
+    fn all<H: FlexContentHandler>(
+        &mut self,
+        params: &mut P,
+        state: &mut Self::State,
+        handler: &mut H,
+    ) {
+        self.a.all(params, &mut state.a, handler);
+        self.b.all(params, &mut state.b, handler);
     }
 }
 
