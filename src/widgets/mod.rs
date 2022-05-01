@@ -8,6 +8,8 @@ pub mod or;
 pub mod lists;
 pub mod textbox;
 pub mod stateful_widget;
+pub mod popup;
+pub mod dropdown;
 
 use druid_shell::kurbo;
 use druid_shell::kurbo::{Rect, Size};

@@ -7,7 +7,7 @@ pub mod row;
 pub mod iter;
 
 #[macro_export]
-macro_rules! flex_item {
+macro_rules! item {
     ($params_var:ident: $params:ty => $build:expr) => {{
         struct Item;
 
@@ -21,8 +21,15 @@ macro_rules! flex_item {
             }
         }
 
-        FlexItem {
-            build: Item,
+        Item
+    }};
+}
+
+#[macro_export]
+macro_rules! flex_item {
+    ($params_var:ident: $params:ty => $build:expr) => {{
+        $crate::widgets::lists::FlexItem {
+            build: item!($params_var: $params => $build),
             expand: true,
         }
     }};
