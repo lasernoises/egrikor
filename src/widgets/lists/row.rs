@@ -232,7 +232,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
 
                     widget.render(
                         state,
-                        Rect::from_origin_size(self.pos, (widget_width, self.size.height)),
+                        Rect::from_origin_size(self.pos, Size { width: widget_width, height: self.size.height }),
                         self.renderer,
                         self.theme,
                         input_state,
@@ -313,7 +313,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
                 if extra_layers >= self.cursor_layer {
                     let (ret, _) = widget.handle_cursor_input(
                         state,
-                        Rect::from_origin_size(self.pos, (widget_width, self.size.height)),
+                        Rect::from_origin_size(self.pos, Size { width: widget_width, height: self.size.height }),
                         self.cursor_pos,
                         self.cursor_layer,
                         self.input,
@@ -397,7 +397,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
                 if focus {
                     widget.handle_keyboard_input(
                         state,
-                        Rect::from_origin_size(self.pos, (widget_width, self.size.height)),
+                        Rect::from_origin_size(self.pos, Size { width: widget_width, height: self.size.height }),
                         self.input,
                         self.input_state,
                         self.theme,
