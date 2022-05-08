@@ -1,9 +1,9 @@
 use crate::*;
 use super::{popup::*, NoneWidget};
-use super::checkbox::checkbox;
 
 use super::stateful_widget::{WidgetState, stateful_widget};
-use super::lists::row::row;
+use super::button::text_button;
+use super::lists::col::col;
 use super::lists::iter::IterFlexContent;
 
 struct State {
@@ -24,10 +24,10 @@ impl WidgetState for State {
 
         Popup {
             params: self,
-            base: item!(p: State => checkbox(true, || { p.open = true; })),
+            base: item!(p: State => text_button("Popup", || { p.open = true; })),
             popup: if open {
-                Some(item!(p: State => row(p, IterFlexContent {
-                    iter: (0..8).map(|x| flex_item!(p: State => checkbox(true, || {
+                Some(item!(p: State => col(p, IterFlexContent {
+                    iter: (0..8).map(|x| flex_item!(p: State => text_button("Option", || {
                         p.open = false;
                     }))),
                 })))
