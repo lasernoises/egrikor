@@ -8,6 +8,13 @@ use piet_common::Piet;
 use super::*;
 use crate::*;
 
+pub fn text_button(text: &'static str, on_click: impl FnMut()) -> impl Widget {
+    Button {
+        widget: drawables::text(text),
+        on_click,
+    }
+}
+
 pub struct ButtonState<S> {
     pub variant: WidgetVariant,
     pub state: S,
