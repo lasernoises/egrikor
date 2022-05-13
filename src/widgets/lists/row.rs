@@ -30,8 +30,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
     fn build(
         &mut self,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State {
         let mut state = Self::State {
             content_state: C::State::new(),
@@ -42,7 +41,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
             extra_layers: 0,
         };
 
-        self.update(&mut state, constraint, renderer, theme);
+        self.update(&mut state, constraint, ctx);
 
         state
     }
@@ -51,14 +50,12 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
         &mut self,
         state: &mut Self::State,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) {
         struct MeasureHandler<'a, 'b> {
             constraint: &'a LayoutConstraint,
-            renderer: &'a mut Piet<'b>,
+            ctx: &'a mut LayoutCtx<'b>,
             size: Size,
-            theme: &'a Theme,
             expand_count: u32,
             extra_layers: u8,
         }
@@ -74,12 +71,11 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
                     self.expand_count += 1;
                 } else {
                     if let Some(state) = state {
-                        widget.update(state, [None, self.constraint[1]], self.renderer, self.theme);
+                        widget.update(state, [None, self.constraint[1]], self.ctx);
                     } else {
                         *state = Some(widget.build(
                             [None, self.constraint[1]],
-                            self.renderer,
-                            self.theme,
+                            self.ctx,
                         ));
                     }
 
@@ -96,9 +92,8 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
 
         let mut handler = MeasureHandler {
             constraint: &constraint,
-            renderer,
+            ctx,
             size: Size::ZERO,
-            theme,
             expand_count: 0,
             extra_layers: 0,
         };
@@ -114,9 +109,8 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
 
         struct MeasureExpandHandler<'a, 'b> {
             constraint: &'a [Option<f64>; 2],
-            renderer: &'a mut Piet<'b>,
+            ctx: &'a mut LayoutCtx<'b>,
             size: Size,
-            theme: &'a Theme,
             extra_layers: u8,
         }
 
@@ -129,9 +123,9 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
             ) {
                 if expand {
                     if let Some(state) = state {
-                        widget.update(state, *self.constraint, self.renderer, self.theme);
+                        widget.update(state, *self.constraint, self.ctx);
                     } else {
-                        *state = Some(widget.build(*self.constraint, self.renderer, self.theme));
+                        *state = Some(widget.build(*self.constraint, self.ctx));
                     }
 
                     let state = state.as_mut().unwrap();
@@ -149,9 +143,8 @@ impl<'a, P, C: FlexContent<P>> Widget for Row<'a, P, C> {
                 constraint[0].map(|w| (w - min_width) / state.expand_count as f64),
                 constraint[1],
             ],
-            renderer,
+            ctx,
             size: Size::ZERO,
-            theme,
             extra_layers: state.extra_layers,
         };
 

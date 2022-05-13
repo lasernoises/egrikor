@@ -39,11 +39,10 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
     fn build(
         &mut self,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State {
         let mut base = self.base.build(self.params);
-        let base_state = base.build(constraint, renderer, theme);
+        let base_state = base.build(constraint, ctx);
         let min_size = base.min_size(&base_state);
 
         let mut extra_layers = base.extra_layers(&base_state);
@@ -55,7 +54,7 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
             .as_ref()
             .map(|p| {
                 let mut popup = p.build(self.params);
-                let popup_state = popup.build([None; 2], renderer, theme);
+                let popup_state = popup.build([None; 2], ctx);
                 extra_layers += 1 + popup.extra_layers(&popup_state);
                 popup_state
             });
@@ -72,11 +71,10 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
         &mut self,
         state: &mut Self::State,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) {
         let mut base = self.base.build(self.params);
-        base.update(&mut state.base, constraint, renderer, theme);
+        base.update(&mut state.base, constraint, ctx);
         state.min_size = base.min_size(&state.base);
         state.extra_layers = base.extra_layers(&state.base);
 
@@ -85,10 +83,10 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
         if let Some(ref mut popup) = self.popup {
             let mut popup = popup.build(self.params);
             let popup_state = if let Some(ref mut state) = state.popup {
-                popup.update(state, [None; 2], renderer, theme);
+                popup.update(state, [None; 2], ctx);
                 state
             } else {
-                state.popup = Some(popup.build([None; 2], renderer, theme));
+                state.popup = Some(popup.build([None; 2], ctx));
                 state.popup.as_mut().unwrap()
             };
 

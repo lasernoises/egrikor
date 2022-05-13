@@ -4,7 +4,7 @@ use piet_common::Piet;
 
 use super::NoneWidget;
 pub use crate::theme::*;
-use crate::{InputState, LayoutConstraint, Widget};
+use crate::{InputState, LayoutConstraint, Widget, LayoutCtx};
 
 /// More variants can be added here in the future. This is obviously a
 /// suboptimal solution for the problem, the best solution would require
@@ -102,14 +102,13 @@ where
     fn build(
         &mut self,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State {
         match self {
-            OrWidget::A(e) => OrState::A(A::build(e, constraint, renderer, theme)),
-            OrWidget::B(e) => OrState::B(B::build(e, constraint, renderer, theme)),
-            OrWidget::C(e) => OrState::C(C::build(e, constraint, renderer, theme)),
-            OrWidget::D(e) => OrState::D(D::build(e, constraint, renderer, theme)),
+            OrWidget::A(e) => OrState::A(A::build(e, constraint, ctx)),
+            OrWidget::B(e) => OrState::B(B::build(e, constraint, ctx)),
+            OrWidget::C(e) => OrState::C(C::build(e, constraint, ctx)),
+            OrWidget::D(e) => OrState::D(D::build(e, constraint, ctx)),
         }
     }
 
@@ -117,36 +116,35 @@ where
         &mut self,
         state: &mut Self::State,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) {
         match self {
             OrWidget::A(e) => {
                 if let OrState::A(w) = state {
-                    e.update(w, constraint, renderer, theme);
+                    e.update(w, constraint, ctx);
                 } else {
-                    *state = OrState::A(e.build(constraint, renderer, theme));
+                    *state = OrState::A(e.build(constraint, ctx));
                 }
             }
             OrWidget::B(e) => {
                 if let OrState::B(w) = state {
-                    e.update(w, constraint, renderer, theme);
+                    e.update(w, constraint, ctx);
                 } else {
-                    *state = OrState::B(e.build(constraint, renderer, theme));
+                    *state = OrState::B(e.build(constraint, ctx));
                 }
             }
             OrWidget::C(e) => {
                 if let OrState::C(w) = state {
-                    e.update(w, constraint, renderer, theme);
+                    e.update(w, constraint, ctx);
                 } else {
-                    *state = OrState::C(e.build(constraint, renderer, theme));
+                    *state = OrState::C(e.build(constraint, ctx));
                 }
             }
             OrWidget::D(e) => {
                 if let OrState::D(w) = state {
-                    e.update(w, constraint, renderer, theme);
+                    e.update(w, constraint, ctx);
                 } else {
-                    *state = OrState::D(e.build(constraint, renderer, theme));
+                    *state = OrState::D(e.build(constraint, ctx));
                 }
             }
         }

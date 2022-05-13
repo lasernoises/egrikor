@@ -40,14 +40,13 @@ impl<'a> Widget for TextBoxParams<'a> {
     fn build(
         &mut self,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State {
         let mut state = TextBox {
             min_size: Size::ZERO,
             // content: self.0,
         };
-        self.update(&mut state, constraint, renderer, theme);
+        self.update(&mut state, constraint, ctx);
         state
     }
 
@@ -55,21 +54,20 @@ impl<'a> Widget for TextBoxParams<'a> {
         &mut self,
         state: &mut Self::State,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        _theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) {
         // self.editor.rebuild_if_needed(renderer.text());
 
         let width = 100.;
         let text_insets = Insets::new(4.0, 2.0, 4.0, 2.0);
 
-        self.0.placeholder.rebuild_if_needed(renderer.text());
+        self.0.placeholder.rebuild_if_needed(ctx.text);
         if let Some(width) = constraint[0] {
             if self.0.multiline {
                 self.0.editor.set_wrap_width(width - text_insets.x_value());
             }
         }
-        self.0.editor.rebuild_if_needed(renderer.text());
+        self.0.editor.rebuild_if_needed(ctx.text);
 
         // for placeholder text when empty we don't need that shit right now
         // let text_metrics = if data.is_empty() {

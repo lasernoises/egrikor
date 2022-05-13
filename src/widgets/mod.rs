@@ -17,7 +17,7 @@ use druid_shell::piet::RenderContext;
 use piet_common::Piet;
 
 pub use crate::theme::*;
-use crate::{InputState, LayoutConstraint, Widget};
+use crate::{InputState, LayoutConstraint, LayoutCtx, Widget};
 
 #[derive(Copy, Clone, Default)]
 pub struct NoneWidget;
@@ -25,9 +25,9 @@ pub struct NoneWidget;
 impl Widget for NoneWidget {
     type State = ();
 
-    fn build(&mut self, _: LayoutConstraint, _: &mut Piet, _: &Theme) -> () {}
+    fn build(&mut self, _: LayoutConstraint, _: &mut LayoutCtx) -> () {}
 
-    fn update(&mut self, _: &mut (), _: LayoutConstraint, _: &mut Piet, _: &Theme) {}
+    fn update(&mut self, _: &mut (), _: LayoutConstraint, _: &mut LayoutCtx) {}
 
     fn min_size(&self, _: &()) -> Size {
         Size::ZERO

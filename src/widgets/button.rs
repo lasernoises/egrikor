@@ -37,8 +37,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
     fn build(
         &mut self,
         max_size: [Option<f64>; 2],
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State {
         // let rect_theme = theme.rect.get(self.variant, true);
         let mut state = self.widget.build(
@@ -46,8 +45,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
                 max_size[0].map(|w| 0f64.max(w - PADDING)),
                 max_size[1].map(|h| 0f64.max(h - PADDING)),
             ],
-            renderer,
-            theme,
+            ctx,
         );
 
         let layout = self.widget.min_size(&state) + Size::new(PADDING * 2., PADDING * 2.);
@@ -63,8 +61,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
         &mut self,
         state: &mut Self::State,
         max_size: [Option<f64>; 2],
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) {
         self.widget.update(
             &mut state.state,
@@ -72,8 +69,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
                 max_size[0].map(|w| 0f64.max(w - PADDING)),
                 max_size[1].map(|h| 0f64.max(h - PADDING)),
             ],
-            renderer,
-            theme,
+            ctx,
         );
 
         // TODO: These fields are kinda redundant.

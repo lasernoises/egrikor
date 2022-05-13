@@ -25,15 +25,14 @@ impl Widget for TextWidget {
     fn build(
         &mut self,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State {
         let mut state = TextState {
             variant: WidgetVariant::Normal,
             // text: self.0,
             layout: Size::ZERO,
         };
-        self.update(&mut state, constraint, renderer, theme);
+        self.update(&mut state, constraint, ctx);
         state
     }
 
@@ -41,14 +40,12 @@ impl Widget for TextWidget {
         &mut self,
         state: &mut Self::State,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) {
-        let theme = theme.text.get(state.variant, true);
+        let theme = ctx.theme.text.get(state.variant, true);
 
-        let text_factory = renderer.text();
-        let font = text_factory.font_family(theme.font).unwrap();
-        let layout = text_factory
+        let font = ctx.text.font_family(theme.font).unwrap();
+        let layout = ctx.text
             .new_text_layout(self.0)
             .font(font, theme.size as f64)
             .build()
@@ -169,16 +166,14 @@ impl Widget for Checkmark {
     fn build(
         &mut self,
         _constraint: LayoutConstraint,
-        _renderer: &mut Piet,
-        _theme: &Theme,
+        _ctx: &mut LayoutCtx,
     ) -> Self::State {}
 
     fn update(
         &mut self,
         _params: &mut Self::State,
         _constraint: LayoutConstraint,
-        _renderer: &mut Piet,
-        _theme: &Theme,
+        _ctx: &mut LayoutCtx,
     ) {}
 
     // fn measure(
@@ -248,16 +243,14 @@ impl Widget for FixedRect {
     fn build(
         &mut self,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State {}
 
     fn update(
         &mut self,
         state: &mut Self::State,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) {}
 
     fn min_size(&self, state: &Self::State) -> Size {

@@ -7,7 +7,7 @@ use druid_shell::{
     kurbo::{Point, Rect, Size},
     Application, KeyEvent, Modifiers, MouseEvent, Region, WinHandler, WindowBuilder, WindowHandle,
 };
-use piet_common::{Color, Piet, RenderContext};
+use piet_common::{Color, Piet, RenderContext, PietText};
 use widgets::{RectTheme, TextTheme, Theme, WidgetTheme, WidgetVariants};
 
 pub mod text;
@@ -82,22 +82,25 @@ pub struct Context {
 
 type LayoutConstraint = [Option<f64>; 2];
 
+pub struct LayoutCtx<'a> {
+    pub text: &'a mut PietText,
+    pub theme: &'a Theme,
+}
+
 pub trait Widget {
     type State;
 
     fn build(
         &mut self,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State;
 
     fn update(
         &mut self,
         state: &mut Self::State,
         constraint: LayoutConstraint,
-        renderer: &mut Piet,
-        theme: &Theme,
+        ctx: &mut LayoutCtx,
     );
 
     // This will always be called after measure.
@@ -114,13 +117,13 @@ pub trait Widget {
     /// be called for layers a widget actually has.
     fn render(
         &mut self,
-        _state: &mut Self::State,
-        _rect: Rect,
-        _renderer: &mut Piet,
-        _theme: &Theme,
-        _input_state: &InputState,
-        _layer: u8,
-        _focus: bool,
+        state: &mut Self::State,
+        rect: Rect,
+        renderer: &mut Piet,
+        theme: &Theme,
+        input_state: &InputState,
+        layer: u8,
+        focus: bool,
     ) {
     }
 
@@ -210,19 +213,22 @@ where
     }
 
     fn paint(&mut self, piet: &mut Piet, _: &Region) {
+        let mut ctx = LayoutCtx {
+            text: piet.text(),
+            theme: &self.theme,
+        };
+
         let state = if let Some(ref mut state) = self.state {
             self.widget.update(
                 state,
                 [Some(self.size.width), Some(self.size.height)],
-                piet,
-                &self.theme,
+                &mut ctx,
             );
             state
         } else {
             self.state = Some(self.widget.build(
                 [Some(self.size.width), Some(self.size.height)],
-                piet,
-                &self.theme,
+                &mut ctx,
             ));
 
             // I can't think of a way to write this that doesn't require unwrap.

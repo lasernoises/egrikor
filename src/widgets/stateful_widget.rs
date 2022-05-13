@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use druid_shell::kurbo::Size;
 
-use crate::Widget;
+use crate::{Widget, LayoutCtx};
 
 #[macro_export]
 macro_rules! stateful_widget {
@@ -188,13 +188,12 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
     fn build(
         &mut self,
         constraint: crate::LayoutConstraint,
-        renderer: &mut piet_common::Piet,
-        theme: &super::Theme,
+        ctx: &mut LayoutCtx,
     ) -> Self::State {
         let mut state = S::init_state();
         let mut widget = state.build();
 
-        let widget_state = widget.build(constraint, renderer, theme);
+        let widget_state = widget.build(constraint, ctx);
 
         let min_size = widget.min_size(&widget_state);
         let extra_layers = widget.extra_layers(&widget_state);
@@ -214,11 +213,10 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
         &mut self,
         state: &mut Self::State,
         constraint: crate::LayoutConstraint,
-        renderer: &mut piet_common::Piet,
-        theme: &super::Theme,
+        ctx: &mut LayoutCtx,
     ) {
         let mut widget = state.state.build();
-        widget.update(&mut state.widget_state, constraint, renderer, theme);
+        widget.update(&mut state.widget_state, constraint, ctx);
 
         state.min_size = widget.min_size(&state.widget_state);
         state.extra_layers = widget.extra_layers(&state.widget_state);
