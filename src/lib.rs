@@ -82,9 +82,17 @@ pub struct Context {
 
 type LayoutConstraint = [Option<f64>; 2];
 
+#[non_exhaustive]
 pub struct LayoutCtx<'a> {
     pub text: &'a mut PietText,
     pub theme: &'a Theme,
+}
+
+#[non_exhaustive]
+pub struct RenderCtx<'a, 'b> {
+    pub piet: &'a mut Piet<'b>,
+    pub theme: &'a Theme,
+    pub input_state: &'a InputState,
 }
 
 pub trait Widget {
@@ -119,11 +127,9 @@ pub trait Widget {
         &mut self,
         state: &mut Self::State,
         rect: Rect,
-        renderer: &mut Piet,
-        theme: &Theme,
-        input_state: &InputState,
         layer: u8,
         focus: bool,
+        ctx: &mut RenderCtx,
     ) {
     }
 
@@ -242,11 +248,13 @@ where
             self.widget.render(
                 state,
                 Rect::from_origin_size((0.0, 0.0), self.size),
-                piet,
-                &self.theme,
-                &self.input_state,
                 i,
                 true,
+                &mut RenderCtx {
+                    piet,
+                    theme: &self.theme,
+                    input_state: &self.input_state,
+                },
             );
         }
     }

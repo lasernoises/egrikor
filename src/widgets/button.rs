@@ -89,11 +89,9 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
         &mut self,
         state: &mut Self::State,
         rect: Rect,
-        renderer: &mut Piet,
-        theme: &Theme,
-        input_state: &InputState,
         layer: u8,
         focus: bool,
+        ctx: &mut RenderCtx,
     ) {
         // self.widget.render(
         //     &mut state.state,
@@ -110,11 +108,9 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
             &mut self.widget,
             &mut state.state,
             rect,
-            renderer,
-            theme,
-            input_state,
             layer,
             focus,
+            ctx,
         );
     }
 

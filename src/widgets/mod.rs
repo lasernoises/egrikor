@@ -17,7 +17,7 @@ use druid_shell::piet::RenderContext;
 use piet_common::Piet;
 
 pub use crate::theme::*;
-use crate::{InputState, LayoutConstraint, LayoutCtx, Widget};
+use crate::{InputState, LayoutConstraint, LayoutCtx, Widget, RenderCtx};
 
 #[derive(Copy, Clone, Default)]
 pub struct NoneWidget;
@@ -69,46 +69,42 @@ pub fn render_rect<D: Widget>(
     widget: &mut D,
     state: &mut D::State,
     rect: Rect,
-    renderer: &mut Piet,
-    theme: &Theme,
-    input_state: &InputState,
     layer: u8,
     focus: bool,
+    ctx: &mut RenderCtx,
 ) {
     if layer == 0 {
         let hover = hover
-            && if let Some(point) = input_state.cursor_pos {
+            && if let Some(point) = ctx.input_state.cursor_pos {
                 rect.contains(point)
             } else {
                 false
             };
 
-        let brush = &renderer.solid_brush(piet_common::Color::Rgba32(
-            match (hover, input_state.mouse_down) {
+        let brush = &ctx.piet.solid_brush(piet_common::Color::Rgba32(
+            match (hover, ctx.input_state.mouse_down) {
                 (true, true) => COLOR_DOWN,
                 (true, false) => COLOR_HOVER,
                 (false, _) => COLOR,
             },
         ));
-        renderer.fill(rect, brush);
+        ctx.piet.fill(rect, brush);
 
         if border {
             let rect_pos = (rect.x0 + BORDER_WIDTH / 2.0, rect.y0 + BORDER_WIDTH / 2.0);
             let rect_size = (rect.width() - BORDER_WIDTH, rect.height() - BORDER_WIDTH);
             let rect_shape = kurbo::Rect::from_origin_size(rect_pos, rect_size);
 
-            let brush = renderer.solid_brush(piet_common::Color::Rgba32(BORDER_COLOR));
-            renderer.stroke(rect_shape, &brush, BORDER_WIDTH);
+            let brush = ctx.piet.solid_brush(piet_common::Color::Rgba32(BORDER_COLOR));
+            ctx.piet.stroke(rect_shape, &brush, BORDER_WIDTH);
         }
     }
 
     widget.render(
         state,
         rect.inset(-PADDING),
-        renderer,
-        theme,
-        input_state,
         layer,
         focus,
+        ctx,
     );
 }

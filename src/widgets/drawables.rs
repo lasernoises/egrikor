@@ -114,15 +114,13 @@ impl Widget for TextWidget {
         &mut self,
         state: &mut Self::State,
         rect: Rect,
-        renderer: &mut Piet,
-        theme: &Theme,
-        _: &InputState,
         _: u8,
         _: bool,
+        ctx: &mut RenderCtx,
     ) {
-        let theme = theme.text.get(state.variant, true);
+        let theme = ctx.theme.text.get(state.variant, true);
 
-        let text_factory = renderer.text();
+        let text_factory = ctx.piet.text();
         let font = text_factory.font_family(theme.font).unwrap();
         let layout = text_factory
             .new_text_layout(self.0)
@@ -135,7 +133,7 @@ impl Widget for TextWidget {
 
         let line_metric = layout.line_metric(0).unwrap();
 
-        renderer.draw_text(
+        ctx.piet.draw_text(
             &layout,
             (
                 rect.x0 + (rect.width() - text_width) / 2.0,
@@ -204,15 +202,13 @@ impl Widget for Checkmark {
         &mut self,
         _state: &mut Self::State,
         rect: Rect,
-        renderer: &mut Piet,
-        _: &Theme,
-        _: &InputState,
         _: u8,
         _: bool,
+        ctx: &mut RenderCtx,
     ) {
         let rect = Rect::from_center_size(rect.center(), self.0).inset(4.);
 
-        renderer.stroke(
+        ctx.piet.stroke(
             BezPath::from_vec(vec![
                 PathEl::MoveTo((rect.x0, rect.y0 + rect.height() / 2.).into()),
                 PathEl::LineTo((rect.x0 + rect.width() / 3., rect.y1 - rect.height() / 6.).into()),

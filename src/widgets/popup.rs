@@ -116,23 +116,21 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
         &mut self,
         state: &mut Self::State,
         rect: Rect,
-        renderer: &mut Piet,
-        theme: &Theme,
-        input_state: &InputState,
         layer: u8,
         focus: bool,
+        ctx: &mut RenderCtx,
     ) {
         match layer {
             0 => self
                 .base
                 .build(self.params)
-                .render(&mut state.base, rect, renderer, theme, input_state, 0, focus),
+                .render(&mut state.base, rect, 0, focus, ctx),
             1 => {
                 if let Some(ref mut popup) = self.popup {
                     let mut popup = popup.build(self.params);
                     let state = state.popup.as_mut().unwrap();
                     let popup_rect = popup_rect(rect, popup.min_size(state));
-                    popup.render(state, popup_rect, renderer, theme, input_state, 0, focus);
+                    popup.render(state, popup_rect, 0, focus, ctx);
                 }
             }
             _ => (),

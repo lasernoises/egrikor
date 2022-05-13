@@ -4,7 +4,7 @@ use piet_common::Piet;
 
 use super::NoneWidget;
 pub use crate::theme::*;
-use crate::{InputState, LayoutConstraint, Widget, LayoutCtx};
+use crate::{InputState, LayoutConstraint, Widget, LayoutCtx, RenderCtx};
 
 /// More variants can be added here in the future. This is obviously a
 /// suboptimal solution for the problem, the best solution would require
@@ -172,11 +172,9 @@ where
         &mut self,
         state: &mut Self::State,
         rect: Rect,
-        renderer: &mut Piet,
-        theme: &Theme,
-        input_state: &InputState,
         layer: u8,
         focus: bool,
+        ctx: &mut RenderCtx,
     ) {
         use OrWidget::*;
 
@@ -184,38 +182,30 @@ where
             A(w) => w.render(
                 state.as_a_mut().unwrap(),
                 rect,
-                renderer,
-                theme,
-                input_state,
                 layer,
                 focus,
+                ctx,
             ),
             B(w) => w.render(
                 state.as_b_mut().unwrap(),
                 rect,
-                renderer,
-                theme,
-                input_state,
                 layer,
                 focus,
+                ctx,
             ),
             C(w) => w.render(
                 state.as_c_mut().unwrap(),
                 rect,
-                renderer,
-                theme,
-                input_state,
                 layer,
                 focus,
+                ctx,
             ),
             D(w) => w.render(
                 state.as_d_mut().unwrap(),
                 rect,
-                renderer,
-                theme,
-                input_state,
                 layer,
                 focus,
+                ctx,
             ),
         }
     }

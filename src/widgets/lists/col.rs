@@ -174,31 +174,27 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
         &mut self,
         state: &mut Self::State,
         rect: Rect,
-        renderer: &mut Piet,
-        theme: &Theme,
-        input_state: &InputState,
         layer: u8,
         focus: bool,
+        ctx: &mut RenderCtx,
     ) {
         let min_height = state.no_expand_size;
 
         let extra_height = rect.height() - min_height;
         let expand_height = extra_height / state.expand_count as f64;
 
-        struct RenderHandler<'a, 'b> {
+        struct RenderHandler<'a, 'b, 'c> {
             expand_height: f64,
             layer: u8,
-            input_state: &'a InputState,
             extra_layers: u8,
             pos: Point,
             size: Size,
-            renderer: &'a mut Piet<'b>,
-            theme: &'a Theme,
             focus: Option<u16>,
+            ctx: &'a mut RenderCtx<'b, 'c>,
             i: u16,
         }
 
-        impl<'a, 'b> FlexContentHandler for RenderHandler<'a, 'b> {
+        impl<'a, 'b, 'c> FlexContentHandler for RenderHandler<'a, 'b, 'c> {
             fn widget<W: Widget>(
                 &mut self,
                 widget: &mut W,
@@ -217,7 +213,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
                     let empty_input_state: InputState = Default::default();
 
                     let input_state = if self.layer == self.extra_layers {
-                        self.input_state
+                        self.ctx.input_state
                     } else {
                         &empty_input_state
                     };
@@ -225,11 +221,13 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
                     widget.render(
                         state,
                         Rect::from_origin_size(self.pos, Size { height: widget_height, width: self.size.width }),
-                        self.renderer,
-                        self.theme,
-                        input_state,
                         self.layer,
                         self.focus == Some(self.i),
+                        &mut RenderCtx {
+                            piet: &mut *self.ctx.piet,
+                            input_state: &input_state,
+                            ..*self.ctx
+                        },
                     );
                 }
 
@@ -241,13 +239,11 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
         let mut handler = RenderHandler {
             expand_height,
             layer,
-            input_state,
             extra_layers: state.extra_layers,
             pos: rect.origin(),
             size: rect.size(),
-            renderer,
-            theme,
             focus: if focus { state.focus } else { None },
+            ctx,
             i: 0,
         };
 

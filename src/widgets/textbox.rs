@@ -106,11 +106,9 @@ impl<'a> Widget for TextBoxParams<'a> {
         &mut self,
         state: &mut Self::State,
         rect: Rect,
-        renderer: &mut Piet,
-        _theme: &Theme,
-        _input_state: &InputState,
         _layer: u8,
         focus: bool,
+        ctx: &mut RenderCtx,
     ) {
         // let size = renderer.size();
         let background_color = Color::rgb8(0x3a, 0x3a, 0x3a);
@@ -136,7 +134,7 @@ impl<'a> Widget for TextBoxParams<'a> {
         //     .inset(-border_width / 2.)
         //     .to_rounded_rect(2.);
 
-        renderer
+        ctx.piet
             .with_save(|rc| {
                 rc.transform(Affine::translate((rect.x0, rect.y0)));
 
