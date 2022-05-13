@@ -21,10 +21,6 @@ pub struct ButtonState<S> {
     pub layout: Size,
 }
 
-#[derive(Copy, Clone, Debug)]
-pub enum ButtonEvent {
-    Click,
-}
 pub struct Button<E, H> {
     pub widget: E,
     pub on_click: H,
@@ -37,7 +33,6 @@ pub struct Button<E, H> {
 impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
     // type Params = Button<D::Params, H>;
     type State = ButtonState<D::State>;
-    type Event = ButtonEvent;
 
     fn build(
         &mut self,
@@ -137,23 +132,18 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
         _input_state: &InputState,
         _theme: &Theme,
         _: bool,
-    ) -> (InputReturn, Option<ButtonEvent>) {
+    ) -> InputReturn {
         // let rect_theme = theme.rect.get(self.variant, true);
 
-        (
-            Default::default(),
-            match input {
-                CursorInput::Up(..) => {
-                    if rect.contains(cursor_pos) {
-                        (self.on_click)();
-                        Some(ButtonEvent::Click)
-                    } else {
-                        None
-                    }
+        match input {
+            CursorInput::Up(..) => {
+                if rect.contains(cursor_pos) {
+                    (self.on_click)();
                 }
-                _ => None,
-            },
-        )
+            }
+            _ => (),
+        }
+        Default::default()
     }
 }
 
@@ -233,7 +223,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
 //         theme: &Theme,
 //         focus: bool,
 //         context: &mut C,
-//     ) -> (InputReturn, Option<Self::Event>) {
+//     ) -> InputReturn {
 //         if rect.contains(cursor_pos) {
 //             let on_click = &mut self.on_click;
 //             let h = &mut || {

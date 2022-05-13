@@ -26,7 +26,6 @@ pub struct ColState<S> {
 
 impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
     type State = ColState<C::State>;
-    type Event = ();
 
     fn build(
         &mut self,
@@ -272,7 +271,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
         input_state: &InputState,
         theme: &Theme,
         focus: bool,
-    ) -> (InputReturn, Option<Self::Event>) {
+    ) -> InputReturn {
         let min_height = state.no_expand_size;
 
         let extra_height = rect.height() - min_height;
@@ -311,7 +310,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
                 let extra_layers = widget.extra_layers(state);
 
                 if extra_layers >= self.cursor_layer {
-                    let (ret, _) = widget.handle_cursor_input(
+                    let ret = widget.handle_cursor_input(
                         state,
                         Rect::from_origin_size(self.pos, Size { height: widget_height, width: self.size.width }),
                         self.cursor_pos,
@@ -350,12 +349,9 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
 
         self.content.all(self.params, &mut state.content_state, &mut handler);
 
-        (
-            InputReturn {
-                demand_focus: handler.demand_focus,
-            },
-            None,
-        )
+        InputReturn {
+            demand_focus: handler.demand_focus,
+        }
     }
 
     fn handle_keyboard_input(
@@ -366,7 +362,7 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
         input_state: &InputState,
         theme: &Theme,
         focus: bool,
-    ) -> Option<Self::Event> {
+    ) {
         struct KeyboardInputHandler<'a> {
             pos: Point,
             size: Size,
@@ -427,7 +423,5 @@ impl<'a, P, C: FlexContent<P>> Widget for Col<'a, P, C> {
         };
 
         self.content.all(self.params, &mut state.content_state, &mut handler);
-
-        None
     }
 }

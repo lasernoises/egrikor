@@ -21,7 +21,6 @@ pub struct TextState {
 
 impl Widget for TextWidget {
     type State = TextState;
-    type Event = ();
 
     fn build(
         &mut self,
@@ -166,7 +165,6 @@ pub struct Checkmark(pub Size);
 /// checkmark (as the name suggests).
 impl Widget for Checkmark {
     type State = ();
-    type Event = ();
 
     fn build(
         &mut self,
@@ -246,7 +244,6 @@ pub struct FixedRect(pub Size);
 
 impl Widget for FixedRect {
     type State = ();
-    type Event = ();
 
     fn build(
         &mut self,

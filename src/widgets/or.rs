@@ -98,7 +98,6 @@ where
     D: Widget,
 {
     type State = OrState<A::State, B::State, C::State, D::State>;
-    type Event = ();
 
     fn build(
         &mut self,
@@ -249,66 +248,59 @@ where
         input_state: &InputState,
         theme: &Theme,
         focus: bool,
-    ) -> (crate::InputReturn, Option<Self::Event>) {
+    ) -> crate::InputReturn {
         use OrWidget::*;
 
-        (
-            match self {
-                A(w) => {
-                    w.handle_cursor_input(
-                        state.as_a_mut().unwrap(),
-                        rect,
-                        cursor_pos,
-                        cursor_layer,
-                        input,
-                        input_state,
-                        theme,
-                        focus,
-                    )
-                    .0
-                }
-                B(w) => {
-                    w.handle_cursor_input(
-                        state.as_b_mut().unwrap(),
-                        rect,
-                        cursor_pos,
-                        cursor_layer,
-                        input,
-                        input_state,
-                        theme,
-                        focus,
-                    )
-                    .0
-                }
-                C(w) => {
-                    w.handle_cursor_input(
-                        state.as_c_mut().unwrap(),
-                        rect,
-                        cursor_pos,
-                        cursor_layer,
-                        input,
-                        input_state,
-                        theme,
-                        focus,
-                    )
-                    .0
-                }
-                D(w) => {
-                    w.handle_cursor_input(
-                        state.as_d_mut().unwrap(),
-                        rect,
-                        cursor_pos,
-                        cursor_layer,
-                        input,
-                        input_state,
-                        theme,
-                        focus,
-                    )
-                    .0
-                }
-            },
-            None,
-        )
+        match self {
+            A(w) => {
+                w.handle_cursor_input(
+                    state.as_a_mut().unwrap(),
+                    rect,
+                    cursor_pos,
+                    cursor_layer,
+                    input,
+                    input_state,
+                    theme,
+                    focus,
+                )
+            }
+            B(w) => {
+                w.handle_cursor_input(
+                    state.as_b_mut().unwrap(),
+                    rect,
+                    cursor_pos,
+                    cursor_layer,
+                    input,
+                    input_state,
+                    theme,
+                    focus,
+                )
+            }
+            C(w) => {
+                w.handle_cursor_input(
+                    state.as_c_mut().unwrap(),
+                    rect,
+                    cursor_pos,
+                    cursor_layer,
+                    input,
+                    input_state,
+                    theme,
+                    focus,
+                )
+            }
+            D(w) => {
+                w.handle_cursor_input(
+                    state.as_d_mut().unwrap(),
+                    rect,
+                    cursor_pos,
+                    cursor_layer,
+                    input,
+                    input_state,
+                    theme,
+                    focus,
+                )
+            }
+        }
     }
 
     fn handle_keyboard_input(
@@ -319,7 +311,7 @@ where
         input_state: &InputState,
         theme: &Theme,
         focus: bool,
-    ) -> Option<Self::Event> {
+    ) {
         use OrWidget::*;
 
         match self {
@@ -364,7 +356,5 @@ where
                 );
             }
         }
-
-        None
     }
 }

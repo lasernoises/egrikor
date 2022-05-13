@@ -35,7 +35,6 @@ pub struct State<B, Q> {
 
 impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut()> Widget for Popup<'a, P, B, Q, C> {
     type State = State<B::State, Q::State>;
-    type Event = ();
 
     fn build(
         &mut self,
@@ -179,7 +178,7 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
         input_state: &InputState,
         theme: &Theme,
         focus: bool,
-    ) -> (InputReturn, Option<Self::Event>) {
+    ) -> InputReturn {
         if let Some(ref mut popup) = self.popup {
             let mut popup = popup.build(self.params);
             let popup_state = state.popup.as_mut().unwrap();

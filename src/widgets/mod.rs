@@ -24,7 +24,6 @@ pub struct NoneWidget;
 
 impl Widget for NoneWidget {
     type State = ();
-    type Event = ();
 
     fn build(&mut self, _: LayoutConstraint, _: &mut Piet, _: &Theme) -> () {}
 

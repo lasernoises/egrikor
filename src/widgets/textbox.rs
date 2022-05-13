@@ -36,7 +36,6 @@ struct TextBoxParams<'a>(&'a mut TextBoxContent);
 
 impl<'a> Widget for TextBoxParams<'a> {
     type State = TextBox;
-    type Event = ();
 
     fn build(
         &mut self,
@@ -228,7 +227,7 @@ impl<'a> Widget for TextBoxParams<'a> {
         input_state: &InputState,
         _theme: &Theme,
         _focus: bool,
-    ) -> (InputReturn, Option<()>) {
+    ) -> InputReturn {
         self.0.suppress_adjust_hscroll = false;
 
         match input {
@@ -252,7 +251,7 @@ impl<'a> Widget for TextBoxParams<'a> {
                     // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                     self.0.editor.click(cursor_pos, input_state.mods);
 
-                    return (InputReturn { demand_focus: true }, None);
+                    return InputReturn { demand_focus: true };
                 }
 
                 // ctx.request_paint();
@@ -290,7 +289,7 @@ impl<'a> Widget for TextBoxParams<'a> {
         _input_state: &InputState,
         _theme: &Theme,
         _focus: bool,
-    ) -> Option<()> {
+    ) {
         self.0.suppress_adjust_hscroll = false;
 
         match input {
@@ -315,8 +314,6 @@ impl<'a> Widget for TextBoxParams<'a> {
                 // ctx.request_paint();
             }
         }
-
-        None
     }
 
     // fn handle_input(

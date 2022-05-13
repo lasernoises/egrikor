@@ -84,7 +84,6 @@ type LayoutConstraint = [Option<f64>; 2];
 
 pub trait Widget {
     type State;
-    type Event: std::fmt::Debug;
 
     fn build(
         &mut self,
@@ -151,7 +150,7 @@ pub trait Widget {
         _input_state: &InputState,
         _theme: &Theme,
         _focus: bool,
-    ) -> (InputReturn, Option<Self::Event>) {
+    ) -> InputReturn {
         Default::default()
     }
 
@@ -165,9 +164,7 @@ pub trait Widget {
         _input_state: &InputState,
         _theme: &Theme,
         _focus: bool,
-    ) -> Option<Self::Event> {
-        None
-    }
+    ) {}
 }
 
 pub struct WindowHandler<W: Widget> {

@@ -137,7 +137,7 @@ macro_rules! stateful_widget {
                 input_state: &crate::InputState,
                 theme: &super::Theme,
                 focus: bool,
-            ) -> Option<Self::Event> {
+            ) {
                 let mut widget = $build(&mut state.state);
                 widget.handle_keyboard_input(
                     &mut state.widget_state,
@@ -183,7 +183,6 @@ struct StatefulWidgetState<S, W> {
 impl<S: WidgetState> Widget for StatefulWidget<S>
     // where Self: 'a,
 {
-    type Event = ();
     type State = StatefulWidgetState<S, S::WidgetState>;
 
     fn build(
@@ -275,22 +274,18 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
         input_state: &crate::InputState,
         theme: &super::Theme,
         focus: bool,
-    ) -> (crate::InputReturn, Option<Self::Event>) {
+    ) -> crate::InputReturn {
         let mut widget = state.state.build();
-        (
-            widget
-                .handle_cursor_input(
-                    &mut state.widget_state,
-                    rect,
-                    cursor_pos,
-                    cursor_layer,
-                    input,
-                    input_state,
-                    theme,
-                    focus,
-                )
-                .0,
-            None,
+
+        widget.handle_cursor_input(
+            &mut state.widget_state,
+            rect,
+            cursor_pos,
+            cursor_layer,
+            input,
+            input_state,
+            theme,
+            focus,
         )
     }
 
@@ -302,7 +297,7 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
         input_state: &crate::InputState,
         theme: &super::Theme,
         focus: bool,
-    ) -> Option<Self::Event> {
+    ) {
         let mut widget = state.state.build();
         widget.handle_keyboard_input(
             &mut state.widget_state,
@@ -312,8 +307,6 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
             theme,
             focus,
         );
-
-        None
     }
 }
 
