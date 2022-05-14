@@ -2,63 +2,70 @@ use std::fmt::Debug;
 
 use crate::*;
 
-pub mod col;
-pub mod row;
+// pub mod col;
 pub mod iter;
+pub mod flex;
 
-#[macro_export]
-macro_rules! item {
-    ($params_var:ident: $params:ty => $build:expr) => {{
-        struct Item;
+pub use flex::{row, col};
 
-        impl crate::widgets::lists::FlexItemBuild for Item {
-            type Params = $params;
-            type Widget<'a> = impl Widget + 'a;
-            type State = <Self::Widget<'static> as Widget>::State;
+// pub mod iter;
 
-            fn build<'a>(&self, $params_var: &'a mut $params) -> Self::Widget<'a> {
-                $build
-            }
-        }
+// #[macro_export]
+// macro_rules! item {
+//     ($params_var:ident: $params:ty => $build:expr) => {{
+//         struct Item;
 
-        Item
-    }};
-}
+//         impl crate::widgets::lists::FlexItemBuild for Item {
+//             type Params = $params;
+//             type Widget<'a> = impl Widget + 'a;
+//             type State = <Self::Widget<'static> as Widget>::State;
 
-#[macro_export]
-macro_rules! flex_item {
-    ($params_var:ident: $params:ty => $build:expr) => {{
-        $crate::widgets::lists::FlexItem {
-            build: item!($params_var: $params => $build),
-            expand: true,
-        }
-    }};
-}
+//             fn build<'a>(&self, $params_var: &'a mut $params) -> Self::Widget<'a> {
+//                 $build
+//             }
+//         }
+
+//         Item
+//     }};
+// }
+
+// #[macro_export]
+// macro_rules! flex_item {
+//     ($params_var:ident: $params:ty => $build:expr) => {{
+//         $crate::widgets::lists::FlexItem {
+//             build: item!($params_var: $params => $build),
+//             expand: true,
+//         }
+//     }};
+// }
 
 #[macro_export]
 macro_rules! flex_content {
     // () => {
     //     $crate::widgets::lists::EmptyFlexContent
     // };
-    ($params_var:ident: $params:ty => [$($build:expr),* $(,)?]) => {{
+    ($($build:expr),* $(,)?) => {{
         use $crate::widgets::lists::FlexContent;
         $crate::widgets::lists::EmptyFlexContent $(.then(
-            crate::flex_item!($params_var: $params => $build)
+            // crate::flex_item!($params_var: $params => $build)
+            $crate::widgets::lists::FlexItem {
+                widget: $build,
+                expand: true,
+            }
         ))*
     }};
 }
 
-pub trait FlexContent<P> {
+pub trait FlexContent<E> {
     type State: FlexContentState;
 
-    fn all<H: FlexContentHandler>(
+    fn all<H: FlexContentHandler<E>>(
         &mut self,
-        params: &mut P,
         state: &mut Self::State,
         handler: &mut H,
     );
 
-    fn then<O: FlexContent<P>>(self, other: O) -> Then<Self, O>
+    fn then<O: FlexContent<E>>(self, other: O) -> Then<Self, O>
     where
         Self: Sized,
     {
@@ -66,24 +73,24 @@ pub trait FlexContent<P> {
     }
 }
 
-pub trait FlexContentHandler {
-    fn widget<W: Widget>(&mut self, widget: &mut W, state: &mut Option<W::State>, expand: bool);
+pub trait FlexContentHandler<E> {
+    fn widget<W: Widget<E>>(&mut self, widget: &mut W, state: &mut Option<W::State>, expand: bool);
 }
 
 pub trait FlexContentState {
     fn new() -> Self;
 }
 
-pub trait FlexItemBuild {
-    type Params;
-    type State;
-    type Widget<'a>: Widget<State = Self::State> + 'a;
+// pub trait FlexItemBuild {
+//     type Params;
+//     type State;
+//     type Widget<'a>: Widget<State = Self::State> + 'a;
 
-    fn build<'a>(&self, params: &'a mut Self::Params) -> Self::Widget<'a>;
-}
+//     fn build<'a>(&self, params: &'a mut Self::Params) -> Self::Widget<'a>;
+// }
 
-pub struct FlexItem<B> {
-    pub build: B,
+pub struct FlexItem<W> {
+    pub widget: W,
     pub expand: bool,
 }
 
@@ -91,17 +98,16 @@ pub struct FlexItemState<S> {
     state: Option<S>,
 }
 
-impl<P, B: FlexItemBuild<Params = P>> FlexContent<P> for FlexItem<B> {
-    type State = FlexItemState<B::State>;
+impl<E, W: Widget<E>> FlexContent<E> for FlexItem<W> {
+    type State = FlexItemState<W::State>;
 
-    fn all<H: FlexContentHandler>(
+    fn all<H: FlexContentHandler<E>>(
         &mut self,
-        params: &mut P,
         state: &mut Self::State,
         handler: &mut H,
     ) {
-        let mut widget = self.build.build(params);
-        handler.widget(&mut widget, &mut state.state, self.expand);
+        // let mut widget = self.build.build(params);
+        handler.widget(&mut self.widget, &mut state.state, self.expand);
     }
 }
 
@@ -126,10 +132,10 @@ pub struct EmptyFlexContent;
 
 pub struct EmptyFlexContentState;
 
-impl<P> FlexContent<P> for EmptyFlexContent {
+impl<E> FlexContent<E> for EmptyFlexContent {
     type State = EmptyFlexContentState;
 
-    fn all<H: FlexContentHandler>(&mut self, _: &mut P, _: &mut Self::State, _: &mut H) {}
+    fn all<H: FlexContentHandler<E>>(&mut self, _: &mut Self::State, _: &mut H) {}
 }
 
 impl FlexContentState for EmptyFlexContentState {
@@ -148,17 +154,16 @@ pub struct ThenState<A, B> {
     b: B,
 }
 
-impl<P, A: FlexContent<P>, B: FlexContent<P>> FlexContent<P> for Then<A, B> {
+impl<E, A: FlexContent<E>, B: FlexContent<E>> FlexContent<E> for Then<A, B> {
     type State = ThenState<A::State, B::State>;
 
-    fn all<H: FlexContentHandler>(
+    fn all<H: FlexContentHandler<E>>(
         &mut self,
-        params: &mut P,
         state: &mut Self::State,
         handler: &mut H,
     ) {
-        self.a.all(params, &mut state.a, handler);
-        self.b.all(params, &mut state.b, handler);
+        self.a.all(&mut state.a, handler);
+        self.b.all(&mut state.b, handler);
     }
 }
 

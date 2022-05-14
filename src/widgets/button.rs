@@ -8,7 +8,7 @@ use piet_common::Piet;
 use super::*;
 use crate::*;
 
-pub fn text_button(text: &'static str, on_click: impl FnMut()) -> impl Widget {
+pub fn text_button<E>(text: &'static str, on_click: impl FnMut(&mut E)) -> impl Widget<E> {
     Button {
         widget: drawables::text(text),
         on_click,
@@ -30,21 +30,23 @@ pub struct Button<E, H> {
 //     type Widget = Button<E::Widget>;
 // }
 
-impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
+impl<E, D: Widget<E>, H: FnMut(&mut E)> Widget<E> for Button<D, H> {
     // type Params = Button<D::Params, H>;
     type State = ButtonState<D::State>;
 
     fn build(
         &mut self,
-        max_size: [Option<f64>; 2],
+        env: &mut E,
+        constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State {
         // let rect_theme = theme.rect.get(self.variant, true);
         let mut state = self.widget.build(
-            [
-                max_size[0].map(|w| 0f64.max(w - PADDING)),
-                max_size[1].map(|h| 0f64.max(h - PADDING)),
-            ],
+            env,
+            LayoutConstraint {
+                x: constraint.x.map(|w| 0f64.max(w - PADDING)),
+                y: constraint.y.map(|h| 0f64.max(h - PADDING)),
+            },
             ctx,
         );
 
@@ -60,15 +62,17 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
     fn update(
         &mut self,
         state: &mut Self::State,
-        max_size: [Option<f64>; 2],
+        env: &mut E,
+        constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) {
         self.widget.update(
             &mut state.state,
-            [
-                max_size[0].map(|w| 0f64.max(w - PADDING)),
-                max_size[1].map(|h| 0f64.max(h - PADDING)),
-            ],
+            env,
+            LayoutConstraint {
+                x: constraint.x.map(|w| 0f64.max(w - PADDING)),
+                y: constraint.y.map(|h| 0f64.max(h - PADDING)),
+            },
             ctx,
         );
 
@@ -88,6 +92,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
     fn render(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         layer: u8,
         focus: bool,
@@ -107,6 +112,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
             true,
             &mut self.widget,
             &mut state.state,
+            env,
             rect,
             layer,
             focus,
@@ -117,6 +123,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
     fn handle_cursor_input(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         cursor_pos: Point,
         _cursor_layer: u8,
@@ -130,7 +137,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
         match input {
             CursorInput::Up(..) => {
                 if rect.contains(cursor_pos) {
-                    (self.on_click)();
+                    (self.on_click)(env);
                 }
             }
             _ => (),
@@ -170,7 +177,7 @@ impl<D: Widget, H: FnMut()> Widget for Button<D, H> {
 //
 //     fn measure(
 //         &mut self,
-//         max_size: [Option<f64>; 2],
+//         max_size: LayoutConstraint,
 //         renderer: &mut Piet,
 //         theme: &Theme,
 //     ) -> Size {

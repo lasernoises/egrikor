@@ -28,17 +28,18 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 // const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete-editing");
 // const CANCEL_EDITING: Selector = Selector::new("druid.builtin.textbox-cancel-editing");
 
-pub fn textbox<'a>(content: &'a mut TextBoxContent) -> impl Widget + 'a {
+pub fn textbox<'a, E>(content: &'a mut TextBoxContent) -> impl Widget<E> + 'a {
     TextBoxParams(content)
 }
 
 struct TextBoxParams<'a>(&'a mut TextBoxContent);
 
-impl<'a> Widget for TextBoxParams<'a> {
+impl<'a, E> Widget<E> for TextBoxParams<'a> {
     type State = TextBox;
 
     fn build(
         &mut self,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State {
@@ -46,13 +47,14 @@ impl<'a> Widget for TextBoxParams<'a> {
             min_size: Size::ZERO,
             // content: self.0,
         };
-        self.update(&mut state, constraint, ctx);
+        self.update(&mut state, env, constraint, ctx);
         state
     }
 
     fn update(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) {
@@ -62,7 +64,7 @@ impl<'a> Widget for TextBoxParams<'a> {
         let text_insets = Insets::new(4.0, 2.0, 4.0, 2.0);
 
         self.0.placeholder.rebuild_if_needed(ctx.text);
-        if let Some(width) = constraint[0] {
+        if let Some(width) = constraint.x {
             if self.0.multiline {
                 self.0.editor.set_wrap_width(width - text_insets.x_value());
             }
@@ -105,6 +107,7 @@ impl<'a> Widget for TextBoxParams<'a> {
     fn render(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         _layer: u8,
         focus: bool,
@@ -216,6 +219,7 @@ impl<'a> Widget for TextBoxParams<'a> {
     fn handle_cursor_input(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         cursor_pos: Point,
         _cursor_layer: u8,
@@ -280,6 +284,7 @@ impl<'a> Widget for TextBoxParams<'a> {
     fn handle_keyboard_input(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         _rect: Rect,
         input: &KeyboardInput,
         _input_state: &InputState,

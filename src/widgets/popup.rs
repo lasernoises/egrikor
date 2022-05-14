@@ -1,11 +1,8 @@
 use crate::*;
 
-use super::lists::FlexItemBuild;
-
-pub struct Popup<'a, P, B, Q, C> {
-    pub params: &'a mut P,
+pub struct Popup<B, P, C> {
     pub base: B,
-    pub popup: Option<Q>,
+    pub popup: Option<P>,
     pub on_close: C,
 }
 
@@ -19,11 +16,11 @@ pub struct Popup<'a, P, B, Q, C> {
 // }
 
 fn popup_rect(base_rect: Rect, popup_min_size: Size) -> Rect {
-    base_rect
-    // Rect::from_origin_size(
-    //     (base_rect.x0, base_rect.y1),
-    //     (base_rect.width(), popup_min_size.height),
-    // )
+    // base_rect
+    Rect::from_origin_size(
+        (base_rect.x0, base_rect.y1),
+        (base_rect.width(), popup_min_size.height),
+    )
 }
 
 pub struct State<B, Q> {
@@ -33,31 +30,25 @@ pub struct State<B, Q> {
     extra_layers: u8,
 }
 
-impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut()> Widget for Popup<'a, P, B, Q, C> {
-    type State = State<B::State, Q::State>;
+impl<E, B: Widget<E>, P: Widget<E>, C: Fn(&mut E)> Widget<E> for Popup<B, P, C> {
+    type State = State<B::State, P::State>;
 
     fn build(
         &mut self,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State {
-        let mut base = self.base.build(self.params);
-        let base_state = base.build(constraint, ctx);
-        let min_size = base.min_size(&base_state);
+        let base_state = self.base.build(env, constraint, ctx);
+        let min_size = self.base.min_size(&base_state);
 
-        let mut extra_layers = base.extra_layers(&base_state);
+        let mut extra_layers = self.base.extra_layers(&base_state);
 
-        drop(base);
-
-        let popup = self
-            .popup
-            .as_ref()
-            .map(|p| {
-                let mut popup = p.build(self.params);
-                let popup_state = popup.build([None; 2], ctx);
-                extra_layers += 1 + popup.extra_layers(&popup_state);
-                popup_state
-            });
+        let popup = self.popup.as_mut().map(|p| {
+            let popup_state = p.build(env, LayoutConstraint { x: None, y: None }, ctx);
+            extra_layers += 1 + p.extra_layers(&popup_state);
+            popup_state
+        });
 
         State {
             base: base_state,
@@ -70,23 +61,20 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
     fn update(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) {
-        let mut base = self.base.build(self.params);
-        base.update(&mut state.base, constraint, ctx);
-        state.min_size = base.min_size(&state.base);
-        state.extra_layers = base.extra_layers(&state.base);
-
-        drop(base);
+        self.base.update(&mut state.base, env, constraint, ctx);
+        state.min_size = self.base.min_size(&state.base);
+        state.extra_layers = self.base.extra_layers(&state.base);
 
         if let Some(ref mut popup) = self.popup {
-            let mut popup = popup.build(self.params);
             let popup_state = if let Some(ref mut state) = state.popup {
-                popup.update(state, [None; 2], ctx);
+                popup.update(state, env, LayoutConstraint { x: None, y: None }, ctx);
                 state
             } else {
-                state.popup = Some(popup.build([None; 2], ctx));
+                state.popup = Some(popup.build(env, LayoutConstraint { x: None, y: None }, ctx));
                 state.popup.as_mut().unwrap()
             };
 
@@ -115,22 +103,19 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
     fn render(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         layer: u8,
         focus: bool,
         ctx: &mut RenderCtx,
     ) {
         match layer {
-            0 => self
-                .base
-                .build(self.params)
-                .render(&mut state.base, rect, 0, focus, ctx),
+            0 => self.base.render(&mut state.base, env, rect, 0, focus, ctx),
             1 => {
                 if let Some(ref mut popup) = self.popup {
-                    let mut popup = popup.build(self.params);
                     let state = state.popup.as_mut().unwrap();
                     let popup_rect = popup_rect(rect, popup.min_size(state));
-                    popup.render(state, popup_rect, 0, focus, ctx);
+                    popup.render(state, env, popup_rect, 0, focus, ctx);
                 }
             }
             _ => (),
@@ -144,7 +129,6 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
         input_pos: Point,
     ) -> Option<u8> {
         if let Some(ref mut popup) = self.popup {
-            let mut popup = popup.build(self.params);
             let popup_state = state.popup.as_mut().unwrap();
             let popup_rect = popup_rect(rect, popup.min_size(popup_state));
 
@@ -154,12 +138,10 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
                 drop(popup);
 
                 self.base
-                    .build(self.params)
                     .test_input_pos_layer(&mut state.base, rect, input_pos)
             }
         } else {
             self.base
-                .build(self.params)
                 .test_input_pos_layer(&mut state.base, rect, input_pos)
         }
     }
@@ -167,6 +149,7 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
     fn handle_cursor_input(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         cursor_pos: Point,
         cursor_layer: u8,
@@ -176,7 +159,6 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
         focus: bool,
     ) -> InputReturn {
         if let Some(ref mut popup) = self.popup {
-            let mut popup = popup.build(self.params);
             let popup_state = state.popup.as_mut().unwrap();
             let popup_rect = popup_rect(rect, popup.min_size(popup_state));
 
@@ -187,10 +169,11 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
             };
 
             if click_outside_popup {
-                (self.on_close)();
+                (self.on_close)(env);
             } else {
                 popup.handle_cursor_input(
                     popup_state,
+                    env,
                     popup_rect,
                     cursor_pos,
                     cursor_layer.saturating_sub(1),
@@ -201,8 +184,9 @@ impl<'a, P, B: FlexItemBuild<Params = P>, Q: FlexItemBuild<Params = P>, C: FnMut
                 );
             }
         } else {
-            self.base.build(self.params).handle_cursor_input(
+            self.base.handle_cursor_input(
                 &mut state.base,
+                env,
                 rect,
                 cursor_pos,
                 cursor_layer,

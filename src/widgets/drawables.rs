@@ -1,5 +1,5 @@
 use super::*;
-use super::stateful_widget::WidgetState;
+// use super::stateful_widget::WidgetState;
 use crate::*;
 
 use druid_shell::kurbo::{BezPath, PathEl};
@@ -7,7 +7,7 @@ use druid_shell::piet::{Color, Text, TextLayout, TextLayoutBuilder};
 use piet_common::Piet;
 use piet_common::RenderContext;
 
-pub fn text(text: &'static str) -> impl Widget {
+pub fn text<E>(text: &'static str) -> impl Widget<E> {
     TextWidget(text)
 }
 
@@ -19,11 +19,12 @@ pub struct TextState {
     pub layout: Size,
 }
 
-impl Widget for TextWidget {
+impl<E> Widget<E> for TextWidget {
     type State = TextState;
 
     fn build(
         &mut self,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State {
@@ -32,13 +33,14 @@ impl Widget for TextWidget {
             // text: self.0,
             layout: Size::ZERO,
         };
-        self.update(&mut state, constraint, ctx);
+        self.update(&mut state, env, constraint, ctx);
         state
     }
 
     fn update(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) {
@@ -56,12 +58,12 @@ impl Widget for TextWidget {
         let min_height: f64 = layout_size.height;
 
         state.layout = Size::new(
-            if let Some(max_width) = constraint[0] {
+            if let Some(max_width) = constraint.x {
                 min_width.max(max_width)
             } else {
                 min_width
             },
-            if let Some(max_height) = constraint[1] {
+            if let Some(max_height) = constraint.y {
                 min_height.max(max_height)
             } else {
                 min_height
@@ -71,7 +73,7 @@ impl Widget for TextWidget {
 
     // fn measure(
     //     &mut self,
-    //     max_size: [Option<f64>; 2],
+    //     max_size: LayoutConstraint,
     //     renderer: &mut Piet,
     //     theme: &Theme,
     //     _: &mut C,
@@ -113,6 +115,7 @@ impl Widget for TextWidget {
     fn render(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         _: u8,
         _: bool,
@@ -158,11 +161,12 @@ pub struct Checkmark(pub Size);
 
 /// Much like the [FixedRect] the [Checkmark] also only has a fixed size, but it also renders a
 /// checkmark (as the name suggests).
-impl Widget for Checkmark {
+impl<E> Widget<E> for Checkmark {
     type State = ();
 
     fn build(
         &mut self,
+        env: &mut E,
         _constraint: LayoutConstraint,
         _ctx: &mut LayoutCtx,
     ) -> Self::State {}
@@ -170,13 +174,14 @@ impl Widget for Checkmark {
     fn update(
         &mut self,
         _params: &mut Self::State,
+        env: &mut E,
         _constraint: LayoutConstraint,
         _ctx: &mut LayoutCtx,
     ) {}
 
     // fn measure(
     //     &mut self,
-    //     _max_size: [Option<f64>; 2],
+    //     _max_size: LayoutConstraint,
     //     _renderer: &mut Piet,
     //     _theme: &Theme,
     //     _: &mut C,
@@ -201,6 +206,7 @@ impl Widget for Checkmark {
     fn render(
         &mut self,
         _state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         _: u8,
         _: bool,
@@ -233,11 +239,12 @@ impl Widget for Checkmark {
 
 pub struct FixedRect(pub Size);
 
-impl Widget for FixedRect {
+impl<E> Widget<E> for FixedRect {
     type State = ();
 
     fn build(
         &mut self,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State {}
@@ -245,6 +252,7 @@ impl Widget for FixedRect {
     fn update(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) {}
@@ -252,7 +260,6 @@ impl Widget for FixedRect {
     fn min_size(&self, state: &Self::State) -> Size {
         self.0
     }
-
 }
 
 // /// Much like the [FixedRect] the [Checkmark] also only has a fixed size, but it also renders a

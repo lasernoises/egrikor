@@ -22,12 +22,12 @@ use crate::{InputState, LayoutConstraint, LayoutCtx, Widget, RenderCtx};
 #[derive(Copy, Clone, Default)]
 pub struct NoneWidget;
 
-impl Widget for NoneWidget {
+impl<E> Widget<E> for NoneWidget {
     type State = ();
 
-    fn build(&mut self, _: LayoutConstraint, _: &mut LayoutCtx) -> () {}
+    fn build(&mut self, _: &mut E, _: LayoutConstraint, _: &mut LayoutCtx) -> () {}
 
-    fn update(&mut self, _: &mut (), _: LayoutConstraint, _: &mut LayoutCtx) {}
+    fn update(&mut self, _: &mut (), _: &mut E, _: LayoutConstraint, _: &mut LayoutCtx) {}
 
     fn min_size(&self, _: &()) -> Size {
         Size::ZERO
@@ -47,7 +47,7 @@ pub const BORDER_COLOR: u32 = 0xFF_FF_FF_FF;
 // pub fn measure_rect<W: Widget>(
 //     widget: &mut W,
 //     state: &mut W::State,
-//     max_size: [Option<f64>; 2],
+//     max_size: LayoutConstraint,
 //     renderer: &mut Piet,
 //     theme: &Theme,
 // ) -> Size {
@@ -62,12 +62,13 @@ pub const BORDER_COLOR: u32 = 0xFF_FF_FF_FF;
 //     ) + Size::new(PADDING * 2., PADDING * 2.)
 // }
 
-pub fn render_rect<D: Widget>(
+pub fn render_rect<E, D: Widget<E>>(
     border: bool,
     hover: bool,
 
     widget: &mut D,
     state: &mut D::State,
+    env: &mut E,
     rect: Rect,
     layer: u8,
     focus: bool,
@@ -102,6 +103,7 @@ pub fn render_rect<D: Widget>(
 
     widget.render(
         state,
+        env,
         rect.inset(-PADDING),
         layer,
         focus,

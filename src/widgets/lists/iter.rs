@@ -14,12 +14,11 @@ impl<T> FlexContentState for IterFlexContentState<T> {
     }
 }
 
-impl<P, E: FlexContent<P>, I: Iterator<Item = E> + Clone> FlexContent<P> for IterFlexContent<I> {
-    type State = IterFlexContentState<E::State>;
+impl<E, C: FlexContent<E>, I: Iterator<Item = C> + Clone> FlexContent<E> for IterFlexContent<I> {
+    type State = IterFlexContentState<C::State>;
 
-    fn all<H: FlexContentHandler>(
+    fn all<H: FlexContentHandler<E>>(
         &mut self,
-        params: &mut P,
         state: &mut Self::State,
         handler: &mut H,
     ) {
@@ -27,10 +26,10 @@ impl<P, E: FlexContent<P>, I: Iterator<Item = E> + Clone> FlexContent<P> for Ite
             let item_state = if let Some(s) = state.state.get_mut(i) {
                 s
             } else {
-                state.state.push(E::State::new());
+                state.state.push(C::State::new());
                 state.state.last_mut().unwrap()
             };
-            item.all(params, item_state, handler);
+            item.all(item_state, handler);
         }
     }
 }

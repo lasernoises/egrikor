@@ -158,18 +158,19 @@ macro_rules! stateful_widget {
     };
 }
 
-pub trait WidgetState {
-    type WidgetState;
-    type Widget<'a>: Widget<State = Self::WidgetState> + 'a where Self: 'a;
-    // type Widget: Widget + 'a;
+// pub trait WidgetState<E>: Sized {
+//     type WidgetState;
+//     type Widget<'a>: Widget<Self, State = Self::WidgetState> + 'a where Self: 'a;
+//     // type Widget: Widget + 'a;
 
-    fn init_state() -> Self;
+//     fn init_state() -> Self;
 
-    fn build<'a>(&'a mut self) -> Self::Widget<'a>;
-}
+//     fn build<'a>(&'a mut self) -> Self::Widget<'a>;
+// }
 
-struct StatefulWidget<S> {
+struct StatefulWidget<S, B> {
     s: PhantomData<S>,
+    build: B,
 }
 
 struct StatefulWidgetState<S, W> {
@@ -180,20 +181,21 @@ struct StatefulWidgetState<S, W> {
     extra_layers: u8,
 }
 
-impl<S: WidgetState> Widget for StatefulWidget<S>
+impl<E, S: Default, W: Widget<S>, B: Fn(&mut S) -> W> Widget<E> for StatefulWidget<S, B>
     // where Self: 'a,
 {
-    type State = StatefulWidgetState<S, S::WidgetState>;
+    type State = StatefulWidgetState<S, W::State>;
 
     fn build(
         &mut self,
+        env: &mut E,
         constraint: crate::LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State {
-        let mut state = S::init_state();
-        let mut widget = state.build();
+        let mut state: S = Default::default();
+        let mut widget = (self.build)(&mut state);
 
-        let widget_state = widget.build(constraint, ctx);
+        let widget_state = widget.build(&mut state, constraint, ctx);
 
         let min_size = widget.min_size(&widget_state);
         let extra_layers = widget.extra_layers(&widget_state);
@@ -212,11 +214,12 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
     fn update(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         constraint: crate::LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) {
-        let mut widget = state.state.build();
-        widget.update(&mut state.widget_state, constraint, ctx);
+        let mut widget = (self.build)(&mut state.state);
+        widget.update(&mut state.widget_state, &mut state.state, constraint, ctx);
 
         state.min_size = widget.min_size(&state.widget_state);
         state.extra_layers = widget.extra_layers(&state.widget_state);
@@ -233,14 +236,16 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
     fn render(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: druid_shell::kurbo::Rect,
         layer: u8,
         focus: bool,
         ctx: &mut RenderCtx,
     ) {
-        let mut widget = state.state.build();
+        let mut widget = (self.build)(&mut state.state);
         widget.render(
             &mut state.widget_state,
+            &mut state.state,
             rect,
             layer,
             focus,
@@ -254,13 +259,14 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
         rect: druid_shell::kurbo::Rect,
         input_pos: druid_shell::kurbo::Point,
     ) -> Option<u8> {
-        let mut widget = state.state.build();
+        let mut widget = (self.build)(&mut state.state);
         widget.test_input_pos_layer(&mut state.widget_state, rect, input_pos)
     }
 
     fn handle_cursor_input(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: druid_shell::kurbo::Rect,
         cursor_pos: druid_shell::kurbo::Point,
         cursor_layer: u8,
@@ -269,10 +275,11 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
         theme: &super::Theme,
         focus: bool,
     ) -> crate::InputReturn {
-        let mut widget = state.state.build();
+        let mut widget = (self.build)(&mut state.state);
 
         widget.handle_cursor_input(
             &mut state.widget_state,
+            &mut state.state,
             rect,
             cursor_pos,
             cursor_layer,
@@ -286,15 +293,17 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
     fn handle_keyboard_input(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: druid_shell::kurbo::Rect,
         input: &crate::KeyboardInput,
         input_state: &crate::InputState,
         theme: &super::Theme,
         focus: bool,
     ) {
-        let mut widget = state.state.build();
+        let mut widget = (self.build)(&mut state.state);
         widget.handle_keyboard_input(
             &mut state.widget_state,
+            &mut state.state,
             rect,
             input,
             input_state,
@@ -304,11 +313,18 @@ impl<S: WidgetState> Widget for StatefulWidget<S>
     }
 }
 
-pub fn stateful_widget<'a, S: WidgetState>() -> impl Widget
-where
-    S: 'static,
-{
+pub fn stateful_widget<E, S: Default, W: Widget<S>>(build: impl Fn(&mut S) -> W) -> impl Widget<E> {
     StatefulWidget {
         s: PhantomData::<S>,
+        build,
     }
 }
+
+// pub fn stateful_widget<'a, E, S: WidgetState<E>>() -> impl Widget<E>
+// where
+//     S: 'static,
+// {
+//     StatefulWidget {
+//         s: PhantomData::<S>,
+//     }
+// }

@@ -1,6 +1,3 @@
-#![feature(type_alias_impl_trait)]
-#![feature(generic_associated_types)]
-
 use std::fmt::Debug;
 
 use druid_shell::{
@@ -80,7 +77,19 @@ pub struct Context {
     pub window_size: [f64; 2],
 }
 
-type LayoutConstraint = [Option<f64>; 2];
+// type LayoutConstraint = LayoutConstraint;
+
+#[derive(Copy, Clone, Debug)]
+pub struct LayoutConstraint {
+    pub x: Option<f64>,
+    pub y: Option<f64>,
+}
+
+impl LayoutConstraint {
+    pub const fn new(x: Option<f64>, y: Option<f64>) -> Self {
+        Self { x, y }
+    }
+}
 
 #[non_exhaustive]
 pub struct LayoutCtx<'a> {
@@ -95,11 +104,12 @@ pub struct RenderCtx<'a, 'b> {
     pub input_state: &'a InputState,
 }
 
-pub trait Widget {
+pub trait Widget<E> {
     type State;
 
     fn build(
         &mut self,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State;
@@ -107,6 +117,7 @@ pub trait Widget {
     fn update(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     );
@@ -126,6 +137,7 @@ pub trait Widget {
     fn render(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         layer: u8,
         focus: bool,
@@ -152,13 +164,14 @@ pub trait Widget {
     fn handle_cursor_input(
         &mut self,
         state: &mut Self::State,
-        _rect: Rect,
-        _cursor_pos: Point,
-        _cursor_layer: u8,
-        _input: CursorInput,
-        _input_state: &InputState,
-        _theme: &Theme,
-        _focus: bool,
+        env: &mut E,
+        rect: Rect,
+        cursor_pos: Point,
+        cursor_layer: u8,
+        input: CursorInput,
+        input_state: &InputState,
+        theme: &Theme,
+        focus: bool,
     ) -> InputReturn {
         Default::default()
     }
@@ -168,15 +181,16 @@ pub trait Widget {
     fn handle_keyboard_input(
         &mut self,
         state: &mut Self::State,
-        _rect: Rect,
-        _input: &KeyboardInput,
-        _input_state: &InputState,
-        _theme: &Theme,
-        _focus: bool,
+        env: &mut E,
+        rect: Rect,
+        input: &KeyboardInput,
+        input_state: &InputState,
+        theme: &Theme,
+        focus: bool,
     ) {}
 }
 
-pub struct WindowHandler<W: Widget> {
+pub struct WindowHandler<W: Widget<Runtime>> {
     widget: W,
     state: Option<W::State>,
     input_state: InputState,
@@ -185,7 +199,7 @@ pub struct WindowHandler<W: Widget> {
     theme: Theme,
 }
 
-impl<W: Widget> WindowHandler<W> {
+impl<W: Widget<Runtime>> WindowHandler<W> {
     fn rect(&self) -> Rect {
         Rect::from_origin_size((0., 0.), self.size)
     }
@@ -206,7 +220,7 @@ fn druid_shell_mouse_button_to_mouse_button(
     }
 }
 
-impl<W: Widget> WinHandler for WindowHandler<W>
+impl<W: Widget<Runtime>> WinHandler for WindowHandler<W>
 where
     Self: 'static,
 {
@@ -227,13 +241,15 @@ where
         let state = if let Some(ref mut state) = self.state {
             self.widget.update(
                 state,
-                [Some(self.size.width), Some(self.size.height)],
+                &mut Runtime {},
+                LayoutConstraint::new(Some(self.size.width), Some(self.size.height)),
                 &mut ctx,
             );
             state
         } else {
             self.state = Some(self.widget.build(
-                [Some(self.size.width), Some(self.size.height)],
+                &mut Runtime {},
+                LayoutConstraint::new(Some(self.size.width), Some(self.size.height)),
                 &mut ctx,
             ));
 
@@ -247,6 +263,7 @@ where
         for i in 0..1 + self.widget.extra_layers(&state) {
             self.widget.render(
                 state,
+                &mut Runtime {},
                 Rect::from_origin_size((0.0, 0.0), self.size),
                 i,
                 true,
@@ -275,6 +292,7 @@ where
             if let Some(layer) = layer {
                 self.widget.handle_cursor_input(
                     state,
+                    &mut Runtime {},
                     rect,
                     event.pos,
                     layer,
@@ -306,6 +324,7 @@ where
                 if let Some(layer) = layer {
                     self.widget.handle_cursor_input(
                         state,
+                        &mut Runtime {},
                         rect,
                         event.pos,
                         layer,
@@ -332,6 +351,7 @@ where
                 if let Some(layer) = layer {
                     self.widget.handle_cursor_input(
                         state,
+                        &mut Runtime {},
                         rect,
                         event.pos,
                         layer,
@@ -351,6 +371,7 @@ where
             self.input_state.mods = event.mods;
             self.widget.handle_keyboard_input(
                 state,
+                &mut Runtime {},
                 Rect::from_origin_size((0., 0.), self.size),
                 &KeyboardInput::KeyDown(event),
                 &self.input_state,
@@ -373,7 +394,10 @@ where
     }
 }
 
-pub fn run<W: Widget + 'static>(
+#[non_exhaustive]
+pub struct Runtime {}
+
+pub fn run<W: Widget<Runtime> + 'static>(
     title: &str,
     widget: W,
 ) {

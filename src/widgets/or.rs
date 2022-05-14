@@ -90,61 +90,63 @@ pub enum OrState<A = (), B = (), C = (), D = ()> {
     D(D),
 }
 
-impl<A, B, C, D> Widget for OrWidget<A, B, C, D>
+impl<E, A, B, C, D> Widget<E> for OrWidget<A, B, C, D>
 where
-    A: Widget,
-    B: Widget,
-    C: Widget,
-    D: Widget,
+    A: Widget<E>,
+    B: Widget<E>,
+    C: Widget<E>,
+    D: Widget<E>,
 {
     type State = OrState<A::State, B::State, C::State, D::State>;
 
     fn build(
         &mut self,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State {
         match self {
-            OrWidget::A(e) => OrState::A(A::build(e, constraint, ctx)),
-            OrWidget::B(e) => OrState::B(B::build(e, constraint, ctx)),
-            OrWidget::C(e) => OrState::C(C::build(e, constraint, ctx)),
-            OrWidget::D(e) => OrState::D(D::build(e, constraint, ctx)),
+            OrWidget::A(e) => OrState::A(A::build(e, env, constraint, ctx)),
+            OrWidget::B(e) => OrState::B(B::build(e, env, constraint, ctx)),
+            OrWidget::C(e) => OrState::C(C::build(e, env, constraint, ctx)),
+            OrWidget::D(e) => OrState::D(D::build(e, env, constraint, ctx)),
         }
     }
 
     fn update(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) {
         match self {
             OrWidget::A(e) => {
                 if let OrState::A(w) = state {
-                    e.update(w, constraint, ctx);
+                    e.update(w, env, constraint, ctx);
                 } else {
-                    *state = OrState::A(e.build(constraint, ctx));
+                    *state = OrState::A(e.build(env, constraint, ctx));
                 }
             }
             OrWidget::B(e) => {
                 if let OrState::B(w) = state {
-                    e.update(w, constraint, ctx);
+                    e.update(w, env, constraint, ctx);
                 } else {
-                    *state = OrState::B(e.build(constraint, ctx));
+                    *state = OrState::B(e.build(env, constraint, ctx));
                 }
             }
             OrWidget::C(e) => {
                 if let OrState::C(w) = state {
-                    e.update(w, constraint, ctx);
+                    e.update(w, env, constraint, ctx);
                 } else {
-                    *state = OrState::C(e.build(constraint, ctx));
+                    *state = OrState::C(e.build(env, constraint, ctx));
                 }
             }
             OrWidget::D(e) => {
                 if let OrState::D(w) = state {
-                    e.update(w, constraint, ctx);
+                    e.update(w, env, constraint, ctx);
                 } else {
-                    *state = OrState::D(e.build(constraint, ctx));
+                    *state = OrState::D(e.build(env, constraint, ctx));
                 }
             }
         }
@@ -171,6 +173,7 @@ where
     fn render(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         layer: u8,
         focus: bool,
@@ -181,6 +184,7 @@ where
         match self {
             A(w) => w.render(
                 state.as_a_mut().unwrap(),
+                env,
                 rect,
                 layer,
                 focus,
@@ -188,6 +192,7 @@ where
             ),
             B(w) => w.render(
                 state.as_b_mut().unwrap(),
+                env,
                 rect,
                 layer,
                 focus,
@@ -195,6 +200,7 @@ where
             ),
             C(w) => w.render(
                 state.as_c_mut().unwrap(),
+                env,
                 rect,
                 layer,
                 focus,
@@ -202,6 +208,7 @@ where
             ),
             D(w) => w.render(
                 state.as_d_mut().unwrap(),
+                env,
                 rect,
                 layer,
                 focus,
@@ -229,6 +236,7 @@ where
     fn handle_cursor_input(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         cursor_pos: kurbo::Point,
         cursor_layer: u8,
@@ -243,6 +251,7 @@ where
             A(w) => {
                 w.handle_cursor_input(
                     state.as_a_mut().unwrap(),
+                    env,
                     rect,
                     cursor_pos,
                     cursor_layer,
@@ -255,6 +264,7 @@ where
             B(w) => {
                 w.handle_cursor_input(
                     state.as_b_mut().unwrap(),
+                    env,
                     rect,
                     cursor_pos,
                     cursor_layer,
@@ -267,6 +277,7 @@ where
             C(w) => {
                 w.handle_cursor_input(
                     state.as_c_mut().unwrap(),
+                    env,
                     rect,
                     cursor_pos,
                     cursor_layer,
@@ -279,6 +290,7 @@ where
             D(w) => {
                 w.handle_cursor_input(
                     state.as_d_mut().unwrap(),
+                    env,
                     rect,
                     cursor_pos,
                     cursor_layer,
@@ -294,6 +306,7 @@ where
     fn handle_keyboard_input(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         input: &crate::KeyboardInput,
         input_state: &InputState,
@@ -306,6 +319,7 @@ where
             A(w) => {
                 w.handle_keyboard_input(
                     state.as_a_mut().unwrap(),
+                    env,
                     rect,
                     input,
                     input_state,
@@ -316,6 +330,7 @@ where
             B(w) => {
                 w.handle_keyboard_input(
                     state.as_b_mut().unwrap(),
+                    env,
                     rect,
                     input,
                     input_state,
@@ -326,6 +341,7 @@ where
             C(w) => {
                 w.handle_keyboard_input(
                     state.as_c_mut().unwrap(),
+                    env,
                     rect,
                     input,
                     input_state,
@@ -336,6 +352,7 @@ where
             D(w) => {
                 w.handle_keyboard_input(
                     state.as_d_mut().unwrap(),
+                    env,
                     rect,
                     input,
                     input_state,
