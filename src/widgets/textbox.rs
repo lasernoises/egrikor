@@ -28,14 +28,14 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 // const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete-editing");
 // const CANCEL_EDITING: Selector = Selector::new("druid.builtin.textbox-cancel-editing");
 
-pub fn textbox<'a, E>(content: &'a mut TextBoxContent) -> impl Widget<E> + 'a {
-    TextBoxParams(content)
+pub fn textbox<E>(content: impl Fn(&mut E) -> &mut TextBoxContent) -> impl Widget<E> {
+    TextBox(content)
 }
 
-struct TextBoxParams<'a>(&'a mut TextBoxContent);
+struct TextBox<F>(F);
 
-impl<'a, E> Widget<E> for TextBoxParams<'a> {
-    type State = TextBox;
+impl<E, F: Fn(&mut E) -> &mut TextBoxContent> Widget<E> for TextBox<F> {
+    type State = TextBoxState;
 
     fn build(
         &mut self,
@@ -43,7 +43,7 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) -> Self::State {
-        let mut state = TextBox {
+        let mut state = TextBoxState {
             min_size: Size::ZERO,
             // content: self.0,
         };
@@ -63,13 +63,15 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
         let width = 100.;
         let text_insets = Insets::new(4.0, 2.0, 4.0, 2.0);
 
-        self.0.placeholder.rebuild_if_needed(ctx.text);
+        let content = self.0(env);
+
+        content.placeholder.rebuild_if_needed(ctx.text);
         if let Some(width) = constraint.x {
-            if self.0.multiline {
-                self.0.editor.set_wrap_width(width - text_insets.x_value());
+            if content.multiline {
+                content.editor.set_wrap_width(width - text_insets.x_value());
             }
         }
-        self.0.editor.rebuild_if_needed(ctx.text);
+        content.editor.rebuild_if_needed(ctx.text);
 
         // for placeholder text when empty we don't need that shit right now
         // let text_metrics = if data.is_empty() {
@@ -78,15 +80,15 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
         //     self.editor.layout().layout_metrics()
         // };
 
-        let text_metrics = self.0.editor.layout().layout_metrics();
+        let text_metrics = content.editor.layout().layout_metrics();
 
         let height = text_metrics.size.height + text_insets.y_value();
         // if we have a non-left text-alignment, we need to manually adjust our position.
-        self.0.update_alignment_adjustment(
+        content.update_alignment_adjustment(
             width - text_insets.x_value(),
             &text_metrics,
         );
-        self.0.text_pos = Point::new(text_insets.x0 + self.0.alignment_offset, text_insets.y0);
+        content.text_pos = Point::new(text_insets.x0 + content.alignment_offset, text_insets.y0);
 
         // Not needed for now.
         // let bottom_padding = (height - text_metrics.size.height) / 2.0;
@@ -137,6 +139,8 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
         //     .inset(-border_width / 2.)
         //     .to_rounded_rect(2.);
 
+        let content = self.0(env);
+
         ctx.piet
             .with_save(|rc| {
                 rc.transform(Affine::translate((rect.x0, rect.y0)));
@@ -148,18 +152,18 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
                     rc.clip(clip_rect);
 
                     // Shift everything inside the clip by the hscroll_offset
-                    rc.transform(Affine::translate((-self.0.hscroll_offset, 0.)));
+                    rc.transform(Affine::translate((-content.hscroll_offset, 0.)));
 
-                    let text_pos = self.0.text_position();
+                    let text_pos = content.text_position();
                     // Draw selection rect
                     if focus {
-                        for sel in self.0.editor.selection_rects() {
+                        for sel in content.editor.selection_rects() {
                             let sel = sel + text_pos.to_vec2();
                             let rounded = sel.to_rounded_rect(1.0);
                             rc.fill(rounded, &selection_color);
                         }
                     }
-                    self.0.editor.draw(rc, text_pos);
+                    content.editor.draw(rc, text_pos);
                     // if !data.is_empty() {
                     //     if is_focused {
                     //         for sel in self.editor.selection_rects() {
@@ -191,8 +195,8 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
                             // the cursor position can extend past the edge of the layout
                             // (commonly when there is trailing whitespace) so we clamp it
                             // to the right edge.
-                            let mut cursor = self.0.editor.cursor_line() + text_pos.to_vec2();
-                            let dx = rect.width() + self.0.hscroll_offset
+                            let mut cursor = content.editor.cursor_line() + text_pos.to_vec2();
+                            let dx = rect.width() + content.hscroll_offset
                                 - text_insets.x0
                                 - cursor.p0.x;
                             if dx < 0.0 {
@@ -228,7 +232,9 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
         _theme: &Theme,
         _focus: bool,
     ) -> InputReturn {
-        self.0.suppress_adjust_hscroll = false;
+        let content = self.0(env);
+
+        content.suppress_adjust_hscroll = false;
 
         match input {
             CursorInput::Down(_button) => {
@@ -239,7 +245,7 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
 
                 if rect.contains(cursor_pos) {
                     let cursor_pos = [
-                        cursor_pos.x - rect.x0 + self.0.hscroll_offset - self.0.alignment_offset,
+                        cursor_pos.x - rect.x0 + content.hscroll_offset - content.alignment_offset,
                         cursor_pos.x - rect.y0,
                     ];
 
@@ -247,9 +253,9 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
 
                     // if !mouse.focus {
                     // }
-                    self.0.was_focused_from_click = true;
+                    content.was_focused_from_click = true;
                     // self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-                    self.0.editor.click(cursor_pos, input_state.mods);
+                    content.editor.click(cursor_pos, input_state.mods);
 
                     return InputReturn { demand_focus: true };
                 }
@@ -258,7 +264,7 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
             }
             CursorInput::Move => {
                 let cursor_pos = [
-                    cursor_pos.x - rect.x0 + self.0.hscroll_offset - self.0.alignment_offset,
+                    cursor_pos.x - rect.x0 + content.hscroll_offset - content.alignment_offset,
                     cursor_pos.y - rect.y0,
                 ];
 
@@ -269,7 +275,7 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
                     && cursor_pos[0] <= rect.width()
                     && cursor_pos[1] <= rect.height()
                 {
-                    self.0.editor.drag(cursor_pos, input_state.mods);
+                    content.editor.drag(cursor_pos, input_state.mods);
                 }
                 // if ctx.is_active() {
                 //     // ctx.request_paint();
@@ -291,7 +297,8 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
         _theme: &Theme,
         _focus: bool,
     ) {
-        self.0.suppress_adjust_hscroll = false;
+        let content = self.0(env);
+        content.suppress_adjust_hscroll = false;
 
         match input {
             KeyboardInput::KeyDown(key_event) => {
@@ -301,9 +308,9 @@ impl<'a, E> Widget<E> for TextBoxParams<'a> {
                     // k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => ctx.focus_prev(),
                     k_e => {
                         if let Some(edit) = BasicTextInput.handle_event(k_e) {
-                            self.0.suppress_adjust_hscroll = matches!(edit, EditAction::SelectAll);
-                            self.0.editor.do_edit(edit);
-                            self.0.editor.update();
+                            content.suppress_adjust_hscroll = matches!(edit, EditAction::SelectAll);
+                            content.editor.do_edit(edit);
+                            content.editor.update();
                             // an explicit request update in case the selection
                             // state has changed, but the data hasn't.
                             // ctx.request_update();
@@ -463,7 +470,7 @@ pub struct TextBoxContent {
 /// [`Formatter`]. You can create a [`ValueTextBox`] by passing the appropriate
 /// [`Formatter`] to [`TextBox::with_formatter`].
 #[derive(Debug)]
-pub struct TextBox {
+pub struct TextBoxState {
     // placeholder: TextLayout<String>,
     // editor: Editor<T>,
     // // this can be Box<dyn TextInput> in the future
@@ -484,6 +491,27 @@ pub struct TextBox {
     // was_focused_from_click: bool,
     min_size: Size,
     // content: &'a mut TextBoxContent,
+}
+
+impl Default for TextBoxContent {
+    fn default() -> Self {
+        let mut placeholder = TextLayout::from_text("");
+        placeholder.set_text_color(Color::rgb8(0x80, 0x80, 0x80));
+        Self {
+            editor: Editor::new(),
+            hscroll_offset: 0.,
+            suppress_adjust_hscroll: false,
+            cursor_timer: TimerToken::INVALID,
+            cursor_on: false,
+            placeholder,
+            multiline: false,
+            alignment: TextAlignment::Start,
+            alignment_offset: 0.0,
+            text_pos: Point::ZERO,
+            was_focused_from_click: false,
+            // min_size: Size::ZERO,
+        }
+    }
 }
 
 impl TextBoxContent {

@@ -1,9 +1,9 @@
-use egrikor::widgets::button::text_button;
 use egrikor::widgets::checkbox::checkbox;
 use egrikor::widgets::dropdown::dropdown;
 use egrikor::widgets::lists::{row, col};
 use egrikor::widgets::stateful_widget::{stateful_widget};
 use egrikor::*;
+use egrikor::widgets::textbox::{textbox, TextBoxContent};
 
 fn example() -> impl Widget<Runtime> {
     row(flex_content![
@@ -14,7 +14,10 @@ fn example() -> impl Widget<Runtime> {
             checkbox(*b == 2, |b: &mut u8| *b = 2),
             stateful_widget(|b: &mut bool| checkbox(*b, |b: &mut bool| *b = !*b)),
         ])),
-        text_button("Hello", |_| ()),
+        stateful_widget(|c: &mut TextBoxContent| col(flex_content![
+            textbox(|c| c),
+            textbox(|c| c),
+        ])),
     ])
 }
 
