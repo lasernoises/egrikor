@@ -220,16 +220,17 @@ where
     fn test_input_pos_layer(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         input_pos: kurbo::Point,
     ) -> Option<u8> {
         use OrWidget::*;
 
         match self {
-            A(w) => w.test_input_pos_layer(state.as_a_mut().unwrap(), rect, input_pos),
-            B(w) => w.test_input_pos_layer(state.as_b_mut().unwrap(), rect, input_pos),
-            C(w) => w.test_input_pos_layer(state.as_c_mut().unwrap(), rect, input_pos),
-            D(w) => w.test_input_pos_layer(state.as_d_mut().unwrap(), rect, input_pos),
+            A(w) => w.test_input_pos_layer(state.as_a_mut().unwrap(), env, rect, input_pos),
+            B(w) => w.test_input_pos_layer(state.as_b_mut().unwrap(), env, rect, input_pos),
+            C(w) => w.test_input_pos_layer(state.as_c_mut().unwrap(), env, rect, input_pos),
+            D(w) => w.test_input_pos_layer(state.as_d_mut().unwrap(), env, rect, input_pos),
         }
     }
 

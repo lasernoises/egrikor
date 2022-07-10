@@ -7,11 +7,11 @@ use druid_shell::piet::{Color, Text, TextLayout, TextLayoutBuilder};
 use piet_common::Piet;
 use piet_common::RenderContext;
 
-pub fn text<E>(text: &'static str) -> impl Widget<E> {
+pub fn text(text: &'static str) -> TextWidget {
     TextWidget(text)
 }
 
-struct TextWidget(&'static str);
+pub struct TextWidget(&'static str);
 
 pub struct TextState {
     pub variant: WidgetVariant,

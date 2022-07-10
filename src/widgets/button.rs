@@ -5,10 +5,14 @@ use piet_common::Piet;
 
 // use super::drawables::{checkmark_elem, fixed_rect_elem};
 // use super::or::OrElem;
-use super::*;
+use super::{drawables::{TextWidget, TextState}, *};
 use crate::*;
 
-pub fn text_button<E>(text: &'static str, on_click: impl FnMut(&mut E)) -> impl Widget<E> {
+pub fn text_button<E, F: for<'a> Fn(&'a mut E)>(
+    text: &'static str,
+    on_click: F,
+) -> impl Widget<E, State = ButtonState<TextState>> {
+    //Button<TextWidget, F> {
     Button {
         widget: drawables::text(text),
         on_click,
@@ -30,7 +34,7 @@ pub struct Button<E, H> {
 //     type Widget = Button<E::Widget>;
 // }
 
-impl<E, D: Widget<E>, H: FnMut(&mut E)> Widget<E> for Button<D, H> {
+impl<E, D: Widget<E>, H: Fn(&mut E)> Widget<E> for Button<D, H> {
     // type Params = Button<D::Params, H>;
     type State = ButtonState<D::State>;
 
@@ -77,7 +81,8 @@ impl<E, D: Widget<E>, H: FnMut(&mut E)> Widget<E> for Button<D, H> {
         );
 
         // TODO: These fields are kinda redundant.
-        state.layout = self.widget.min_size(&mut state.state) + Size::new(PADDING * 2., PADDING * 2.);
+        state.layout =
+            self.widget.min_size(&mut state.state) + Size::new(PADDING * 2., PADDING * 2.);
         // self.on_click = self.on_click;
     }
 

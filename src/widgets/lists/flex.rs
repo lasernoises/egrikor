@@ -12,7 +12,7 @@ macro_rules! flex {
         $primary_size:ident,
         $secondary_size:ident
     ) => {
-        pub fn $function<E, C: FlexContent<E>>(content: C) -> impl Widget<E> {
+        pub fn $function<E, C: FlexContent<E>>(content: C) -> impl Widget<E, State = $state_struct<C::State>> {
             $struct { content }
         }
 

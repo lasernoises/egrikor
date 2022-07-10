@@ -125,6 +125,7 @@ impl<E, B: Widget<E>, P: Widget<E>, C: Fn(&mut E)> Widget<E> for Popup<B, P, C> 
     fn test_input_pos_layer(
         &mut self,
         state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         input_pos: Point,
     ) -> Option<u8> {
@@ -132,17 +133,17 @@ impl<E, B: Widget<E>, P: Widget<E>, C: Fn(&mut E)> Widget<E> for Popup<B, P, C> 
             let popup_state = state.popup.as_mut().unwrap();
             let popup_rect = popup_rect(rect, popup.min_size(popup_state));
 
-            if let Some(layer) = popup.test_input_pos_layer(popup_state, popup_rect, input_pos) {
+            if let Some(layer) = popup.test_input_pos_layer(popup_state, env, popup_rect, input_pos) {
                 Some(layer + 1)
             } else {
                 drop(popup);
 
                 self.base
-                    .test_input_pos_layer(&mut state.base, rect, input_pos)
+                    .test_input_pos_layer(&mut state.base, env, rect, input_pos)
             }
         } else {
             self.base
-                .test_input_pos_layer(&mut state.base, rect, input_pos)
+                .test_input_pos_layer(&mut state.base, env, rect, input_pos)
         }
     }
 

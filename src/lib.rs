@@ -1,3 +1,5 @@
+#![feature(type_alias_impl_trait)]
+
 use std::fmt::Debug;
 
 use druid_shell::{
@@ -151,6 +153,7 @@ pub trait Widget<E> {
     fn test_input_pos_layer(
         &mut self,
         _state: &mut Self::State,
+        env: &mut E,
         rect: Rect,
         input_pos: Point,
     ) -> Option<u8> {
@@ -287,7 +290,7 @@ where
             self.input_state.mods = event.mods;
             let rect = Rect::from_origin_size((0., 0.), self.size);
 
-            let layer = self.widget.test_input_pos_layer(state, rect, event.pos);
+            let layer = self.widget.test_input_pos_layer(state, &mut Runtime {}, rect, event.pos);
 
             if let Some(layer) = layer {
                 self.widget.handle_cursor_input(
@@ -319,7 +322,7 @@ where
             if let Some(button) = druid_shell_mouse_button_to_mouse_button(event.button) {
                 let rect = Rect::from_origin_size((0., 0.), self.size);
 
-                let layer = self.widget.test_input_pos_layer(state, rect, event.pos);
+                let layer = self.widget.test_input_pos_layer(state, &mut Runtime {}, rect, event.pos);
 
                 if let Some(layer) = layer {
                     self.widget.handle_cursor_input(
@@ -346,7 +349,7 @@ where
             if let Some(button) = druid_shell_mouse_button_to_mouse_button(event.button) {
                 let rect = Rect::from_origin_size((0., 0.), self.size);
 
-                let layer = self.widget.test_input_pos_layer(state, rect, event.pos);
+                let layer = self.widget.test_input_pos_layer(state, &mut Runtime {}, rect, event.pos);
 
                 if let Some(layer) = layer {
                     self.widget.handle_cursor_input(
