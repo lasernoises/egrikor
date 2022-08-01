@@ -28,13 +28,16 @@ const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 // const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete-editing");
 // const CANCEL_EDITING: Selector = Selector::new("druid.builtin.textbox-cancel-editing");
 
-pub fn textbox<E>(content: impl Fn(&mut E) -> &mut TextBoxContent) -> impl Widget<E> {
-    TextBox(content)
+pub fn textbox<E>(
+    content: impl Fn(&mut E) -> &mut TextBoxContent,
+    on_update: impl Fn(&mut E),
+) -> impl Widget<E, State = TextBoxState> {
+    TextBox(content, on_update)
 }
 
-struct TextBox<F>(F);
+struct TextBox<F, G>(F, G);
 
-impl<E, F: Fn(&mut E) -> &mut TextBoxContent> Widget<E> for TextBox<F> {
+impl<E, F: Fn(&mut E) -> &mut TextBoxContent, G: Fn(&mut E)> Widget<E> for TextBox<F, G> {
     type State = TextBoxState;
 
     fn build(
@@ -311,6 +314,8 @@ impl<E, F: Fn(&mut E) -> &mut TextBoxContent> Widget<E> for TextBox<F> {
                             content.suppress_adjust_hscroll = matches!(edit, EditAction::SelectAll);
                             content.editor.do_edit(edit);
                             content.editor.update();
+
+                            self.1(env);
                             // an explicit request update in case the selection
                             // state has changed, but the data hasn't.
                             // ctx.request_update();

@@ -15,13 +15,13 @@ macro_rules! stateful_widget {
             state: $state,
             widget_state: StateWidgetState,
 
-            min_size: Size,
+            min_size: druid_shell::kurbo::Size,
             extra_layers: u8,
         }
 
         struct StatefulWidget;
 
-        impl<E> $crate::Widget<E> for StatefulWidget {
+        impl<E> crate::Widget<E> for StatefulWidget {
             type State = StatefulState;
 
             fn build(
@@ -112,7 +112,7 @@ macro_rules! stateful_widget {
                 cursor_layer: u8,
                 input: crate::CursorInput,
                 input_state: &crate::InputState,
-                theme: &super::Theme,
+                theme: &crate::theme::Theme,
                 focus: bool,
             ) -> crate::InputReturn {
                 let mut widget = build(&mut state.state);
@@ -137,7 +137,7 @@ macro_rules! stateful_widget {
                 rect: druid_shell::kurbo::Rect,
                 input: &crate::KeyboardInput,
                 input_state: &crate::InputState,
-                theme: &super::Theme,
+                theme: &crate::theme::Theme,
                 focus: bool,
             ) {
                 let mut widget = build(&mut state.state);

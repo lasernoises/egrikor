@@ -7,7 +7,7 @@ use druid_shell::piet::{Color, Text, TextLayout, TextLayoutBuilder};
 use piet_common::Piet;
 use piet_common::RenderContext;
 
-pub fn text(text: &'static str) -> TextWidget {
+pub fn text<E>(text: &'static str) -> impl Widget<E, State = TextState> {
     TextWidget(text)
 }
 
