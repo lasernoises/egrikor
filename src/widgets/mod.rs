@@ -8,6 +8,7 @@ pub mod or;
 pub mod lists;
 pub mod textbox;
 pub mod stateful_widget;
+pub mod dyn_stateful_widget;
 pub mod popup;
 pub mod dropdown;
 

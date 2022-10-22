@@ -1,4 +1,5 @@
 use egrikor::widgets::dropdown::dropdown;
+use egrikor::widgets::dyn_stateful_widget::*;
 use egrikor::*;
 
 fn example() -> impl Widget<Runtime> {
@@ -15,12 +16,23 @@ fn example() -> impl Widget<Runtime> {
     //         textbox(|c| c),
     //     ])),
     // ])
-    dropdown()
+    stateful_widget(|h: StatefulWidgetHandler<Runtime, Option<u8>>| {
+        let widget = dropdown(
+            match *h.state() {
+                None => "Please select",
+                Some(0) => "Zero",
+                Some(1) => "One",
+                Some(_) => "Two",
+            },
+            [(Some(0), "Zero"), (Some(1), "One"), (Some(2), "Two")].into_iter(),
+            |e: &mut (&mut Option<u8>, &mut Runtime), i| {
+                *e.0 = *i;
+            },
+        );
+        h.widget(widget);
+    })
 }
 
 fn main() {
-    run(
-        "Basic",
-        example(),
-    );
+    run("Basic", example());
 }

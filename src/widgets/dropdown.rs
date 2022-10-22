@@ -5,6 +5,7 @@ use crate::*;
 use super::button::text_button;
 use super::lists::iter::IterFlexContent;
 use super::lists::{col, FlexItem};
+use super::dyn_stateful_widget::*;
 
 // struct State {
 //     open: bool,
@@ -39,21 +40,28 @@ use super::lists::{col, FlexItem};
 
 type State = impl Sized;
 
-pub fn dropdown<E>() -> impl Widget<E, State = State> {
-    stateful_widget!(bool, false, open => {
-        Popup {
-            base: text_button("Popup", |e: &mut (&mut bool, &mut E)| { *e.0 = true; }),
-            popup: if *open {
+pub fn dropdown<I, E>(
+    selected: &'static str,
+    items: impl Iterator<Item = (I, &'static str)> + Clone,
+    on_select: impl Fn(&mut E, &I),
+) -> impl Widget<E, State = State> {
+    stateful_widget(move |h: StatefulWidgetHandler<E, bool>| {
+        let open = *h.state();
+        let on_select = &on_select;
+        h.widget(Popup {
+            base: text_button(selected, |e: &mut (&mut bool, &mut E)| { *e.0 = true; }),
+            popup: if open {
                 Some(col(IterFlexContent {
-                    iter: (0..8).map(|x| FlexItem {
-                        widget: text_button("Option", |e: &mut (&mut bool, &mut E)| {
+                    iter: items.clone().map(|(ident, label)| FlexItem {
+                        widget: text_button(label, move |e: &mut (&mut bool, &mut E)| {
                             *e.0 = false;
+                            on_select(e.1, &ident);
                         }),
                         expand: true,
                     }),
                 }))
             } else { None },
             on_close: |e: &mut (&mut bool, &mut E)| { *e.0 = false },
-        }
+        });
     })
 }

@@ -78,7 +78,7 @@ impl<E, B: Widget<E>, P: Widget<E>, C: Fn(&mut E)> Widget<E> for Popup<B, P, C> 
                 state.popup.as_mut().unwrap()
             };
 
-            state.extra_layers += 1 + popup.extra_layers(&popup_state);
+            state.extra_layers += 1 + popup.extra_layers(popup_state);
         } else {
             state.popup = None;
         }
@@ -136,8 +136,6 @@ impl<E, B: Widget<E>, P: Widget<E>, C: Fn(&mut E)> Widget<E> for Popup<B, P, C> 
             if let Some(layer) = popup.test_input_pos_layer(popup_state, env, popup_rect, input_pos) {
                 Some(layer + 1)
             } else {
-                drop(popup);
-
                 self.base
                     .test_input_pos_layer(&mut state.base, env, rect, input_pos)
             }
