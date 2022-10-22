@@ -74,7 +74,7 @@ pub trait FlexContent<E> {
 }
 
 pub trait FlexContentHandler<E> {
-    fn widget<W: Widget<E>>(&mut self, widget: &mut W, state: &mut Option<W::State>, expand: bool);
+    fn widget<W: Widget<E>>(&mut self, widget: &mut W, state: &mut W::State, expand: bool);
 }
 
 pub trait FlexContentState {
@@ -95,7 +95,7 @@ pub struct FlexItem<W> {
 }
 
 pub struct FlexItemState<S> {
-    state: Option<S>,
+    state: S,
 }
 
 impl<E, W: Widget<E>> FlexContent<E> for FlexItem<W> {
@@ -111,9 +111,11 @@ impl<E, W: Widget<E>> FlexContent<E> for FlexItem<W> {
     }
 }
 
-impl<S> FlexContentState for FlexItemState<S> {
+impl<S: WidgetState> FlexContentState for FlexItemState<S> {
     fn new() -> Self {
-        FlexItemState { state: None }
+        FlexItemState {
+            state: S::new(),
+        }
     }
 }
 

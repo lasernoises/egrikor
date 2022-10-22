@@ -106,33 +106,30 @@ pub struct RenderCtx<'a, 'b> {
     pub input_state: &'a InputState,
 }
 
+pub trait WidgetState {
+    fn new() -> Self;
+
+    fn min_size(&self) -> Size;
+
+    /// These are the extra layers (there is always one at least from the perspective of a widget).
+    /// Layers are relative.
+    /// A widget in layer 1 will not know that there's stuff below.
+    /// Containers must return the max of their children here.
+    fn extra_layers(&self) -> u8 {
+        0
+    }
+}
+
 pub trait Widget<E> {
-    type State;
+    type State: WidgetState;
 
-    fn build(
-        &mut self,
-        env: &mut E,
-        constraint: LayoutConstraint,
-        ctx: &mut LayoutCtx,
-    ) -> Self::State;
-
-    fn update(
+    fn layout(
         &mut self,
         state: &mut Self::State,
         env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     );
-
-    // This will always be called after measure.
-    fn min_size(&self, state: &Self::State) -> Size;
-
-    /// These are the extra layers (there is always one at least from the perspective of a widget).
-    /// Layers are relative a widget in layer 1 will not know that there's stuff below.
-    /// Containers must return the max of their children here.
-    fn extra_layers(&self, state: &Self::State) -> u8 {
-        0
-    }
 
     /// Single-layer widgets can just ignore the `layer` parameter since `render` they should only
     /// be called for layers a widget actually has.
@@ -195,7 +192,7 @@ pub trait Widget<E> {
 
 pub struct WindowHandler<W: Widget<Runtime>> {
     widget: W,
-    state: Option<W::State>,
+    state: W::State,
     input_state: InputState,
     size: Size,
     handle: Option<WindowHandle>,
@@ -241,29 +238,18 @@ where
             theme: &self.theme,
         };
 
-        let state = if let Some(ref mut state) = self.state {
-            self.widget.update(
-                state,
-                &mut Runtime {},
-                LayoutConstraint::new(Some(self.size.width), Some(self.size.height)),
-                &mut ctx,
-            );
-            state
-        } else {
-            self.state = Some(self.widget.build(
-                &mut Runtime {},
-                LayoutConstraint::new(Some(self.size.width), Some(self.size.height)),
-                &mut ctx,
-            ));
+        let state = &mut self.state;
 
-            // I can't think of a way to write this that doesn't require unwrap.
-            // Maybe there could be a function that assigns you a `Some` and returns you a ref.
-            self.state.as_mut().unwrap()
-        };
+        self.widget.layout(
+            state,
+            &mut Runtime {},
+            LayoutConstraint::new(Some(self.size.width), Some(self.size.height)),
+            &mut ctx,
+        );
 
         piet.clear(Color::Rgba32(0x00_00_00_FF));
 
-        for i in 0..1 + self.widget.extra_layers(&state) {
+        for i in 0..1 + state.extra_layers() {
             self.widget.render(
                 state,
                 &mut Runtime {},
@@ -284,10 +270,42 @@ where
     }
 
     fn mouse_move(&mut self, event: &MouseEvent) {
-        if let Some(ref mut state) = self.state {
+        let state = &mut self.state;
 
-            self.input_state.cursor_pos = Some(event.pos);
-            self.input_state.mods = event.mods;
+        self.input_state.cursor_pos = Some(event.pos);
+        self.input_state.mods = event.mods;
+        let rect = Rect::from_origin_size((0., 0.), self.size);
+
+        let layer = self.widget.test_input_pos_layer(state, &mut Runtime {}, rect, event.pos);
+
+        if let Some(layer) = layer {
+            self.widget.handle_cursor_input(
+                state,
+                &mut Runtime {},
+                rect,
+                event.pos,
+                layer,
+                CursorInput::Move,
+                &self.input_state,
+                &self.theme,
+                true,
+            );
+        }
+
+        self.handle.as_ref().unwrap().request_anim_frame();
+    }
+
+    fn mouse_leave(&mut self) {
+        self.input_state.cursor_pos = None;
+        self.handle.as_ref().unwrap().request_anim_frame();
+    }
+
+    fn mouse_down(&mut self, event: &MouseEvent) {
+        let state = &mut self.state;
+
+        self.input_state.mouse_down = true;
+        self.input_state.mods = event.mods;
+        if let Some(button) = druid_shell_mouse_button_to_mouse_button(event.button) {
             let rect = Rect::from_origin_size((0., 0.), self.size);
 
             let layer = self.widget.test_input_pos_layer(state, &mut Runtime {}, rect, event.pos);
@@ -299,91 +317,58 @@ where
                     rect,
                     event.pos,
                     layer,
-                    CursorInput::Move,
+                    CursorInput::Down(button),
                     &self.input_state,
                     &self.theme,
                     true,
                 );
             }
-
-            self.handle.as_ref().unwrap().request_anim_frame();
         }
-    }
-
-    fn mouse_leave(&mut self) {
-        self.input_state.cursor_pos = None;
         self.handle.as_ref().unwrap().request_anim_frame();
     }
 
-    fn mouse_down(&mut self, event: &MouseEvent) {
-        if let Some(ref mut state) = self.state {
-            self.input_state.mouse_down = true;
-            self.input_state.mods = event.mods;
-            if let Some(button) = druid_shell_mouse_button_to_mouse_button(event.button) {
-                let rect = Rect::from_origin_size((0., 0.), self.size);
-
-                let layer = self.widget.test_input_pos_layer(state, &mut Runtime {}, rect, event.pos);
-
-                if let Some(layer) = layer {
-                    self.widget.handle_cursor_input(
-                        state,
-                        &mut Runtime {},
-                        rect,
-                        event.pos,
-                        layer,
-                        CursorInput::Down(button),
-                        &self.input_state,
-                        &self.theme,
-                        true,
-                    );
-                }
-            }
-            self.handle.as_ref().unwrap().request_anim_frame();
-        }
-    }
-
     fn mouse_up(&mut self, event: &MouseEvent) {
-        if let Some(ref mut state) = self.state {
-            self.input_state.mouse_down = false;
-            self.input_state.mods = event.mods;
-            if let Some(button) = druid_shell_mouse_button_to_mouse_button(event.button) {
-                let rect = Rect::from_origin_size((0., 0.), self.size);
+        let state = &mut self.state;
 
-                let layer = self.widget.test_input_pos_layer(state, &mut Runtime {}, rect, event.pos);
+        self.input_state.mouse_down = false;
+        self.input_state.mods = event.mods;
+        if let Some(button) = druid_shell_mouse_button_to_mouse_button(event.button) {
+            let rect = Rect::from_origin_size((0., 0.), self.size);
 
-                if let Some(layer) = layer {
-                    self.widget.handle_cursor_input(
-                        state,
-                        &mut Runtime {},
-                        rect,
-                        event.pos,
-                        layer,
-                        CursorInput::Up(button),
-                        &self.input_state,
-                        &self.theme,
-                        true,
-                    );
-                }
+            let layer = self.widget.test_input_pos_layer(state, &mut Runtime {}, rect, event.pos);
+
+            if let Some(layer) = layer {
+                self.widget.handle_cursor_input(
+                    state,
+                    &mut Runtime {},
+                    rect,
+                    event.pos,
+                    layer,
+                    CursorInput::Up(button),
+                    &self.input_state,
+                    &self.theme,
+                    true,
+                );
             }
-            self.handle.as_ref().unwrap().request_anim_frame();
         }
+        self.handle.as_ref().unwrap().request_anim_frame();
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        if let Some(ref mut state) = self.state {
-            self.input_state.mods = event.mods;
-            self.widget.handle_keyboard_input(
-                state,
-                &mut Runtime {},
-                Rect::from_origin_size((0., 0.), self.size),
-                &KeyboardInput::KeyDown(event),
-                &self.input_state,
-                &self.theme,
-                true,
-            );
+        let state = &mut self.state;
 
-            self.handle.as_ref().unwrap().request_anim_frame();
-        }
+        self.input_state.mods = event.mods;
+        self.widget.handle_keyboard_input(
+            state,
+            &mut Runtime {},
+            Rect::from_origin_size((0., 0.), self.size),
+            &KeyboardInput::KeyDown(event),
+            &self.input_state,
+            &self.theme,
+            true,
+        );
+
+        self.handle.as_ref().unwrap().request_anim_frame();
 
         true
     }
@@ -426,7 +411,7 @@ pub fn run<W: Widget<Runtime> + 'static>(
 
     builder.set_handler(Box::new(WindowHandler {
         widget,
-        state: None,
+        state: W::State::new(),
         input_state: Default::default(),
         size: Size::new(0., 0.),
         handle: None,

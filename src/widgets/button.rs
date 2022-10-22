@@ -1,11 +1,8 @@
-use std::fmt::Debug;
-
 use druid_shell::kurbo::{Point, Rect, Size};
-use piet_common::Piet;
 
 // use super::drawables::{checkmark_elem, fixed_rect_elem};
 // use super::or::OrElem;
-use super::{drawables::{TextWidget, TextState}, *};
+use super::{drawables::TextState, *};
 use crate::*;
 
 pub fn text_button<E, F: for<'a> Fn(&'a mut E)>(
@@ -25,6 +22,20 @@ pub struct ButtonState<S> {
     pub layout: Size,
 }
 
+impl<S: WidgetState> WidgetState for ButtonState<S> {
+    fn new() -> Self {
+        ButtonState {
+            variant: WidgetVariant::Normal,
+            state: S::new(),
+            layout: Size::ZERO,
+        }
+    }
+
+    fn min_size(&self) -> Size {
+        self.layout
+    }
+}
+
 pub struct Button<E, H> {
     pub widget: E,
     pub on_click: H,
@@ -38,39 +49,14 @@ impl<E, D: Widget<E>, H: Fn(&mut E)> Widget<E> for Button<D, H> {
     // type Params = Button<D::Params, H>;
     type State = ButtonState<D::State>;
 
-    fn build(
-        &mut self,
-        env: &mut E,
-        constraint: LayoutConstraint,
-        ctx: &mut LayoutCtx,
-    ) -> Self::State {
-        // let rect_theme = theme.rect.get(self.variant, true);
-        let mut state = self.widget.build(
-            env,
-            LayoutConstraint {
-                x: constraint.x.map(|w| 0f64.max(w - PADDING)),
-                y: constraint.y.map(|h| 0f64.max(h - PADDING)),
-            },
-            ctx,
-        );
-
-        let layout = self.widget.min_size(&state) + Size::new(PADDING * 2., PADDING * 2.);
-
-        ButtonState {
-            variant: WidgetVariant::Normal,
-            state,
-            layout,
-        }
-    }
-
-    fn update(
+    fn layout(
         &mut self,
         state: &mut Self::State,
         env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
     ) {
-        self.widget.update(
+        self.widget.layout(
             &mut state.state,
             env,
             LayoutConstraint {
@@ -81,17 +67,8 @@ impl<E, D: Widget<E>, H: Fn(&mut E)> Widget<E> for Button<D, H> {
         );
 
         // TODO: These fields are kinda redundant.
-        state.layout =
-            self.widget.min_size(&mut state.state) + Size::new(PADDING * 2., PADDING * 2.);
+        state.layout = state.state.min_size() + Size::new(PADDING * 2., PADDING * 2.);
         // self.on_click = self.on_click;
-    }
-
-    fn min_size(&self, state: &Self::State) -> Size {
-        state.layout
-    }
-
-    fn extra_layers(&self, state: &Self::State) -> u8 {
-        0
     }
 
     fn render(

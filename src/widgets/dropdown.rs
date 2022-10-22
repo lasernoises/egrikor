@@ -38,7 +38,7 @@ use super::dyn_stateful_widget::*;
 //     }
 // }
 
-type State = impl Sized;
+type State = impl WidgetState;
 
 pub fn dropdown<I, E>(
     selected: &'static str,

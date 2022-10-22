@@ -33,30 +33,31 @@ macro_rules! flex {
             extra_layers: u8,
         }
 
-        impl<E, C: FlexContent<E>> Widget<E> for $struct<C> {
-            type State = $state_struct<C::State>;
-
-            fn build(
-                &mut self,
-                env: &mut E,
-                constraint: LayoutConstraint,
-                ctx: &mut LayoutCtx,
-            ) -> Self::State {
-                let mut state = Self::State {
-                    content_state: C::State::new(),
+        impl<S: FlexContentState> WidgetState for $state_struct<S> {
+            fn new() -> Self {
+                Self {
+                    content_state: S::new(),
                     focus: None,
                     size: Size::ZERO,
                     no_expand_size: 0.,
                     expand_count: 0,
                     extra_layers: 0,
-                };
-
-                self.update(&mut state, env, constraint, ctx);
-
-                state
+                }
             }
 
-            fn update(
+            fn min_size(&self) -> Size {
+                self.size
+            }
+
+            fn extra_layers(&self) -> u8 {
+                self.extra_layers
+            }
+        }
+
+        impl<E, C: FlexContent<E>> Widget<E> for $struct<C> {
+            type State = $state_struct<C::State>;
+
+            fn layout(
                 &mut self,
                 state: &mut Self::State,
                 env: &mut E,
@@ -76,35 +77,22 @@ macro_rules! flex {
                     fn widget<W: Widget<E>>(
                         &mut self,
                         widget: &mut W,
-                        state: &mut Option<W::State>,
+                        state: &mut W::State,
                         expand: bool,
                     ) {
                         if expand {
                             self.expand_count += 1;
                         } else {
-                            if let Some(state) = state {
-                                widget.update(state, self.env, LayoutConstraint {
-                                    $primary_axis: None,
-                                    $secondary_axis: self.constraint.$secondary_axis,
-                                }, self.ctx);
-                            } else {
-                                *state = Some(widget.build(
-                                    self.env,
-                                    LayoutConstraint {
-                                        $primary_axis: None,
-                                        $secondary_axis: self.constraint.$secondary_axis,
-                                    },
-                                    self.ctx,
-                                ));
-                            }
+                            widget.layout(state, self.env, LayoutConstraint {
+                                $primary_axis: None,
+                                $secondary_axis: self.constraint.$secondary_axis,
+                            }, self.ctx);
 
-                            let state = state.as_mut().unwrap();
-
-                            let min_size = widget.min_size(state);
+                            let min_size = state.min_size();
                             self.size.$primary_size += min_size.$primary_size;
                             self.size.$secondary_size = self.size.$secondary_size.max(min_size.$secondary_size);
 
-                            self.extra_layers = self.extra_layers.max(widget.extra_layers(state));
+                            self.extra_layers = self.extra_layers.max(state.extra_layers());
                         }
                     }
                 }
@@ -139,22 +127,17 @@ macro_rules! flex {
                     fn widget<W: Widget<E>>(
                         &mut self,
                         widget: &mut W,
-                        state: &mut Option<W::State>,
+                        state: &mut W::State,
                         expand: bool,
                     ) {
                         if expand {
-                            if let Some(state) = state {
-                                widget.update(state, self.env, *self.constraint, self.ctx);
-                            } else {
-                                *state = Some(widget.build(self.env, *self.constraint, self.ctx));
-                            }
+                            widget.layout(state, self.env, *self.constraint, self.ctx);
 
-                            let state = state.as_mut().unwrap();
-                            let min_size = widget.min_size(state);
+                            let min_size = state.min_size();
 
                             self.size.$primary_size += min_size.$primary_size;
                             self.size.$secondary_size = self.size.$secondary_size.max(min_size.$secondary_size);
-                            self.extra_layers = self.extra_layers.max(widget.extra_layers(state));
+                            self.extra_layers = self.extra_layers.max(state.extra_layers());
                         }
                     }
                 }
@@ -182,14 +165,6 @@ macro_rules! flex {
                 };
 
                 state.extra_layers = handler.extra_layers;
-            }
-
-            fn min_size(&self, state: &Self::State) -> Size {
-                state.size
-            }
-
-            fn extra_layers(&self, state: &Self::State) -> u8 {
-                state.extra_layers
             }
 
             fn render(
@@ -222,18 +197,16 @@ macro_rules! flex {
                     fn widget<W: Widget<E>>(
                         &mut self,
                         widget: &mut W,
-                        state: &mut Option<W::State>,
+                        state: &mut W::State,
                         expand: bool,
                     ) {
-                        let state = state.as_mut().unwrap();
-
                         let widget_length = if expand {
                             self.expand_length
                         } else {
-                            widget.min_size(state).$primary_size
+                            state.min_size().$primary_size
                         };
 
-                        if self.layer <= widget.extra_layers(state) {
+                        if self.layer <= state.extra_layers() {
                             let empty_input_state: InputState = Default::default();
 
                             let input_state = if self.layer == self.extra_layers {
@@ -316,18 +289,16 @@ macro_rules! flex {
                     fn widget<W: Widget<E>>(
                         &mut self,
                         widget: &mut W,
-                        state: &mut Option<W::State>,
+                        state: &mut W::State,
                         expand: bool,
                     ) {
-                        let state = state.as_mut().unwrap();
-
                         let widget_length = if expand {
                             self.expand_length
                         } else {
-                            widget.min_size(state).$primary_size
+                            state.min_size().$primary_size
                         };
 
-                        let extra_layers = widget.extra_layers(state);
+                        let extra_layers = state.extra_layers();
 
                         if extra_layers >= self.cursor_layer {
                             let ret = widget.handle_cursor_input(
@@ -405,15 +376,13 @@ macro_rules! flex {
                     fn widget<W: Widget<E>>(
                         &mut self,
                         widget: &mut W,
-                        state: &mut Option<W::State>,
+                        state: &mut W::State,
                         expand: bool,
                     ) {
-                        let state = state.as_mut().unwrap();
-
                         let widget_length = if expand {
                             self.expand_length
                         } else {
-                            widget.min_size(state).$primary_size
+                            state.min_size().$primary_size
                         };
 
                         let focus = self.focus == Some(self.i);

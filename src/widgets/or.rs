@@ -4,7 +4,7 @@ use piet_common::Piet;
 
 use super::NoneWidget;
 pub use crate::theme::*;
-use crate::{InputState, LayoutConstraint, Widget, LayoutCtx, RenderCtx};
+use crate::{InputState, LayoutConstraint, LayoutCtx, RenderCtx, Widget, WidgetState};
 
 /// More variants can be added here in the future. This is obviously a
 /// suboptimal solution for the problem, the best solution would require
@@ -84,10 +84,39 @@ impl<A, B, C, D> OrState<A, B, C, D> {
 }
 
 pub enum OrState<A = (), B = (), C = (), D = ()> {
+    None,
     A(A),
     B(B),
     C(C),
     D(D),
+}
+
+impl<A: WidgetState, B: WidgetState, C: WidgetState, D: WidgetState> WidgetState
+    for OrState<A, B, C, D>
+{
+    fn new() -> Self {
+        Self::None
+    }
+
+    fn min_size(&self) -> Size {
+        match self {
+            Self::None => panic!(),
+            Self::A(s) => s.min_size(),
+            Self::B(s) => s.min_size(),
+            Self::C(s) => s.min_size(),
+            Self::D(s) => s.min_size(),
+        }
+    }
+
+    fn extra_layers(&self) -> u8 {
+        match self {
+            Self::None => panic!(),
+            Self::A(s) => s.extra_layers(),
+            Self::B(s) => s.extra_layers(),
+            Self::C(s) => s.extra_layers(),
+            Self::D(s) => s.extra_layers(),
+        }
+    }
 }
 
 impl<E, A, B, C, D> Widget<E> for OrWidget<A, B, C, D>
@@ -99,21 +128,7 @@ where
 {
     type State = OrState<A::State, B::State, C::State, D::State>;
 
-    fn build(
-        &mut self,
-        env: &mut E,
-        constraint: LayoutConstraint,
-        ctx: &mut LayoutCtx,
-    ) -> Self::State {
-        match self {
-            OrWidget::A(e) => OrState::A(A::build(e, env, constraint, ctx)),
-            OrWidget::B(e) => OrState::B(B::build(e, env, constraint, ctx)),
-            OrWidget::C(e) => OrState::C(C::build(e, env, constraint, ctx)),
-            OrWidget::D(e) => OrState::D(D::build(e, env, constraint, ctx)),
-        }
-    }
-
-    fn update(
+    fn layout(
         &mut self,
         state: &mut Self::State,
         env: &mut E,
@@ -122,51 +137,41 @@ where
     ) {
         match self {
             OrWidget::A(e) => {
-                if let OrState::A(w) = state {
-                    e.update(w, env, constraint, ctx);
+                let state = if let OrState::A(w) = state {
+                    w
                 } else {
-                    *state = OrState::A(e.build(env, constraint, ctx));
-                }
+                    *state = OrState::A(A::State::new());
+                    state.as_a_mut().unwrap()
+                };
+                e.layout(state, env, constraint, ctx);
             }
             OrWidget::B(e) => {
-                if let OrState::B(w) = state {
-                    e.update(w, env, constraint, ctx);
+                let state = if let OrState::B(w) = state {
+                    w
                 } else {
-                    *state = OrState::B(e.build(env, constraint, ctx));
-                }
+                    *state = OrState::B(B::State::new());
+                    state.as_b_mut().unwrap()
+                };
+                e.layout(state, env, constraint, ctx);
             }
             OrWidget::C(e) => {
-                if let OrState::C(w) = state {
-                    e.update(w, env, constraint, ctx);
+                let state = if let OrState::C(w) = state {
+                    w
                 } else {
-                    *state = OrState::C(e.build(env, constraint, ctx));
-                }
+                    *state = OrState::C(C::State::new());
+                    state.as_c_mut().unwrap()
+                };
+                e.layout(state, env, constraint, ctx);
             }
             OrWidget::D(e) => {
-                if let OrState::D(w) = state {
-                    e.update(w, env, constraint, ctx);
+                let state = if let OrState::D(w) = state {
+                    w
                 } else {
-                    *state = OrState::D(e.build(env, constraint, ctx));
-                }
+                    *state = OrState::D(D::State::new());
+                    state.as_d_mut().unwrap()
+                };
+                e.layout(state, env, constraint, ctx);
             }
-        }
-    }
-
-    fn min_size(&self, state: &Self::State) -> Size {
-        match self {
-            OrWidget::A(w) => w.min_size(state.as_a().unwrap()),
-            OrWidget::B(w) => w.min_size(state.as_b().unwrap()),
-            OrWidget::C(w) => w.min_size(state.as_c().unwrap()),
-            OrWidget::D(w) => w.min_size(state.as_d().unwrap()),
-        }
-    }
-
-    fn extra_layers(&self, state: &Self::State) -> u8 {
-        match self {
-            OrWidget::A(w) => w.extra_layers(state.as_a().unwrap()),
-            OrWidget::B(w) => w.extra_layers(state.as_b().unwrap()),
-            OrWidget::C(w) => w.extra_layers(state.as_c().unwrap()),
-            OrWidget::D(w) => w.extra_layers(state.as_d().unwrap()),
         }
     }
 
@@ -182,38 +187,10 @@ where
         use OrWidget::*;
 
         match self {
-            A(w) => w.render(
-                state.as_a_mut().unwrap(),
-                env,
-                rect,
-                layer,
-                focus,
-                ctx,
-            ),
-            B(w) => w.render(
-                state.as_b_mut().unwrap(),
-                env,
-                rect,
-                layer,
-                focus,
-                ctx,
-            ),
-            C(w) => w.render(
-                state.as_c_mut().unwrap(),
-                env,
-                rect,
-                layer,
-                focus,
-                ctx,
-            ),
-            D(w) => w.render(
-                state.as_d_mut().unwrap(),
-                env,
-                rect,
-                layer,
-                focus,
-                ctx,
-            ),
+            A(w) => w.render(state.as_a_mut().unwrap(), env, rect, layer, focus, ctx),
+            B(w) => w.render(state.as_b_mut().unwrap(), env, rect, layer, focus, ctx),
+            C(w) => w.render(state.as_c_mut().unwrap(), env, rect, layer, focus, ctx),
+            D(w) => w.render(state.as_d_mut().unwrap(), env, rect, layer, focus, ctx),
         }
     }
 
@@ -249,58 +226,50 @@ where
         use OrWidget::*;
 
         match self {
-            A(w) => {
-                w.handle_cursor_input(
-                    state.as_a_mut().unwrap(),
-                    env,
-                    rect,
-                    cursor_pos,
-                    cursor_layer,
-                    input,
-                    input_state,
-                    theme,
-                    focus,
-                )
-            }
-            B(w) => {
-                w.handle_cursor_input(
-                    state.as_b_mut().unwrap(),
-                    env,
-                    rect,
-                    cursor_pos,
-                    cursor_layer,
-                    input,
-                    input_state,
-                    theme,
-                    focus,
-                )
-            }
-            C(w) => {
-                w.handle_cursor_input(
-                    state.as_c_mut().unwrap(),
-                    env,
-                    rect,
-                    cursor_pos,
-                    cursor_layer,
-                    input,
-                    input_state,
-                    theme,
-                    focus,
-                )
-            }
-            D(w) => {
-                w.handle_cursor_input(
-                    state.as_d_mut().unwrap(),
-                    env,
-                    rect,
-                    cursor_pos,
-                    cursor_layer,
-                    input,
-                    input_state,
-                    theme,
-                    focus,
-                )
-            }
+            A(w) => w.handle_cursor_input(
+                state.as_a_mut().unwrap(),
+                env,
+                rect,
+                cursor_pos,
+                cursor_layer,
+                input,
+                input_state,
+                theme,
+                focus,
+            ),
+            B(w) => w.handle_cursor_input(
+                state.as_b_mut().unwrap(),
+                env,
+                rect,
+                cursor_pos,
+                cursor_layer,
+                input,
+                input_state,
+                theme,
+                focus,
+            ),
+            C(w) => w.handle_cursor_input(
+                state.as_c_mut().unwrap(),
+                env,
+                rect,
+                cursor_pos,
+                cursor_layer,
+                input,
+                input_state,
+                theme,
+                focus,
+            ),
+            D(w) => w.handle_cursor_input(
+                state.as_d_mut().unwrap(),
+                env,
+                rect,
+                cursor_pos,
+                cursor_layer,
+                input,
+                input_state,
+                theme,
+                focus,
+            ),
         }
     }
 

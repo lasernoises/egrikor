@@ -1,16 +1,16 @@
 // pub mod button;
 // pub mod drawables;
 // pub mod or;
-pub mod drawables;
 pub mod button;
 pub mod checkbox;
-pub mod or;
-pub mod lists;
-pub mod textbox;
-pub mod stateful_widget;
-pub mod dyn_stateful_widget;
-pub mod popup;
+pub mod drawables;
 pub mod dropdown;
+pub mod dyn_stateful_widget;
+pub mod lists;
+pub mod or;
+pub mod popup;
+pub mod stateful_widget;
+pub mod textbox;
 
 use druid_shell::kurbo;
 use druid_shell::kurbo::{Rect, Size};
@@ -18,20 +18,33 @@ use druid_shell::piet::RenderContext;
 use piet_common::Piet;
 
 pub use crate::theme::*;
-use crate::{InputState, LayoutConstraint, LayoutCtx, Widget, RenderCtx};
+use crate::{InputState, LayoutConstraint, LayoutCtx, RenderCtx, Widget, WidgetState};
 
 #[derive(Copy, Clone, Default)]
 pub struct NoneWidget;
 
-impl<E> Widget<E> for NoneWidget {
-    type State = ();
+pub struct NoneWidgetState;
 
-    fn build(&mut self, _: &mut E, _: LayoutConstraint, _: &mut LayoutCtx) -> () {}
+impl WidgetState for NoneWidgetState {
+    fn new() -> Self {
+        NoneWidgetState
+    }
 
-    fn update(&mut self, _: &mut (), _: &mut E, _: LayoutConstraint, _: &mut LayoutCtx) {}
-
-    fn min_size(&self, _: &()) -> Size {
+    fn min_size(&self) -> Size {
         Size::ZERO
+    }
+}
+
+impl<E> Widget<E> for NoneWidget {
+    type State = NoneWidgetState;
+
+    fn layout(
+        &mut self,
+        _: &mut NoneWidgetState,
+        _: &mut E,
+        _: LayoutConstraint,
+        _: &mut LayoutCtx,
+    ) {
     }
 }
 
@@ -97,17 +110,12 @@ pub fn render_rect<E, D: Widget<E>>(
             let rect_size = (rect.width() - BORDER_WIDTH, rect.height() - BORDER_WIDTH);
             let rect_shape = kurbo::Rect::from_origin_size(rect_pos, rect_size);
 
-            let brush = ctx.piet.solid_brush(piet_common::Color::Rgba32(BORDER_COLOR));
+            let brush = ctx
+                .piet
+                .solid_brush(piet_common::Color::Rgba32(BORDER_COLOR));
             ctx.piet.stroke(rect_shape, &brush, BORDER_WIDTH);
         }
     }
 
-    widget.render(
-        state,
-        env,
-        rect.inset(-PADDING),
-        layer,
-        focus,
-        ctx,
-    );
+    widget.render(state, env, rect.inset(-PADDING), layer, focus, ctx);
 }

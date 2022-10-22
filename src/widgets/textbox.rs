@@ -40,21 +40,7 @@ struct TextBox<F, G>(F, G);
 impl<E, F: Fn(&mut E) -> &mut TextBoxContent, G: Fn(&mut E)> Widget<E> for TextBox<F, G> {
     type State = TextBoxState;
 
-    fn build(
-        &mut self,
-        env: &mut E,
-        constraint: LayoutConstraint,
-        ctx: &mut LayoutCtx,
-    ) -> Self::State {
-        let mut state = TextBoxState {
-            min_size: Size::ZERO,
-            // content: self.0,
-        };
-        self.update(&mut state, env, constraint, ctx);
-        state
-    }
-
-    fn update(
+    fn layout(
         &mut self,
         state: &mut Self::State,
         env: &mut E,
@@ -100,11 +86,6 @@ impl<E, F: Fn(&mut E) -> &mut TextBoxContent, G: Fn(&mut E)> Widget<E> for TextB
         // renderer.set_baseline_offset(baseline_off);
 
         state.min_size = Size::new(width, height);
-    }
-
-    // This will always be called after measure.
-    fn min_size(&self, state: &Self::State) -> Size {
-        state.min_size
     }
 
     /// Single-layer widgets can just ignore the `layer` parameter since `render` they should only
@@ -496,6 +477,16 @@ pub struct TextBoxState {
     // was_focused_from_click: bool,
     min_size: Size,
     // content: &'a mut TextBoxContent,
+}
+
+impl WidgetState for TextBoxState {
+    fn new() -> Self {
+        TextBoxState { min_size: Size::ZERO }
+    }
+
+    fn min_size(&self) -> Size {
+        self.min_size
+    }
 }
 
 impl Default for TextBoxContent {

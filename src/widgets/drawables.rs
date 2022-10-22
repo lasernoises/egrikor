@@ -19,25 +19,23 @@ pub struct TextState {
     pub layout: Size,
 }
 
+impl WidgetState for TextState {
+    fn new() -> Self {
+        TextState {
+            variant: WidgetVariant::Normal,
+            layout: Size::ZERO,
+        }
+    }
+
+    fn min_size(&self) -> Size {
+        self.layout
+    }
+}
+
 impl<E> Widget<E> for TextWidget {
     type State = TextState;
 
-    fn build(
-        &mut self,
-        env: &mut E,
-        constraint: LayoutConstraint,
-        ctx: &mut LayoutCtx,
-    ) -> Self::State {
-        let mut state = TextState {
-            variant: WidgetVariant::Normal,
-            // text: self.0,
-            layout: Size::ZERO,
-        };
-        self.update(&mut state, env, constraint, ctx);
-        state
-    }
-
-    fn update(
+    fn layout(
         &mut self,
         state: &mut Self::State,
         env: &mut E,
@@ -108,10 +106,6 @@ impl<E> Widget<E> for TextWidget {
     //     self.layout
     // }
 
-    fn min_size(&self, state: &Self::State) -> Size {
-        state.layout
-    }
-
     fn render(
         &mut self,
         state: &mut Self::State,
@@ -159,25 +153,32 @@ impl<E> Widget<E> for TextWidget {
 
 pub struct Checkmark(pub Size);
 
+pub struct CheckmarkState(Size);
+
+impl WidgetState for CheckmarkState {
+    fn new() -> Self {
+        Self(Size::ZERO)
+    }
+
+    fn min_size(&self) -> Size {
+        self.0
+    }
+}
+
 /// Much like the [FixedRect] the [Checkmark] also only has a fixed size, but it also renders a
 /// checkmark (as the name suggests).
 impl<E> Widget<E> for Checkmark {
-    type State = ();
+    type State = CheckmarkState;
 
-    fn build(
+    fn layout(
         &mut self,
-        env: &mut E,
+        state: &mut Self::State,
+        _env: &mut E,
         _constraint: LayoutConstraint,
         _ctx: &mut LayoutCtx,
-    ) -> Self::State {}
-
-    fn update(
-        &mut self,
-        _params: &mut Self::State,
-        env: &mut E,
-        _constraint: LayoutConstraint,
-        _ctx: &mut LayoutCtx,
-    ) {}
+    ) {
+        state.0 = self.0
+    }
 
     // fn measure(
     //     &mut self,
@@ -188,18 +189,6 @@ impl<E> Widget<E> for Checkmark {
     // ) -> Size {
     //     self.0
     // }
-
-    // This will always be called after measure.
-    fn min_size(&self, state: &Self::State) -> Size {
-        self.0
-    }
-
-    /// These are the extra layers (there is always one at least from the perspective of a widget).
-    /// Layers are relative a widget in layer 1 will not know that there's stuff below.
-    /// Containers must return the max of their children here.
-    fn extra_layers(&self, state: &Self::State) -> u8 {
-        0
-    }
 
     /// Single-layer widgets can just ignore the `layer` parameter since `render` they should only
     /// be called for layers a widget actually has.
@@ -239,26 +228,29 @@ impl<E> Widget<E> for Checkmark {
 
 pub struct FixedRect(pub Size);
 
+pub struct FixedRectState(Size);
+
+impl WidgetState for FixedRectState {
+    fn new() -> Self {
+        Self(Size::ZERO)
+    }
+
+    fn min_size(&self) -> Size {
+        self.0
+    }
+}
+
 impl<E> Widget<E> for FixedRect {
-    type State = ();
+    type State = FixedRectState;
 
-    fn build(
-        &mut self,
-        env: &mut E,
-        constraint: LayoutConstraint,
-        ctx: &mut LayoutCtx,
-    ) -> Self::State {}
-
-    fn update(
+    fn layout(
         &mut self,
         state: &mut Self::State,
         env: &mut E,
         constraint: LayoutConstraint,
         ctx: &mut LayoutCtx,
-    ) {}
-
-    fn min_size(&self, state: &Self::State) -> Size {
-        self.0
+    ) {
+        state.0 = self.0;
     }
 }
 

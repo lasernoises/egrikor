@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! stateful_widget {
     ($state:ident, $init:expr, $state_var:ident => $build:expr) => {{
-        type StateWidgetState = impl Sized;
+        type StateWidgetState = impl $crate::WidgetState;
         type StateWidget<'a, 'b, E: 'b> = impl $crate::Widget<
             (&'a mut $state, &'b mut E),
             State = StateWidgetState,
@@ -19,38 +19,31 @@ macro_rules! stateful_widget {
             extra_layers: u8,
         }
 
+        impl $crate::WidgetState for StatefulState {
+            fn new() -> Self {
+                Self {
+                    state: $init,
+                    widget_state: StateWidgetState::new(),
+                    min_size: druid_shell::kurbo::Size::ZERO,
+                    extra_layers: 0,
+                }
+            }
+
+            fn min_size(&self) -> druid_shell::kurbo::Size {
+                self.min_size
+            }
+
+            fn extra_layers(&self) -> u8 {
+                self.extra_layers
+            }
+        }
+
         struct StatefulWidget;
 
         impl<E> crate::Widget<E> for StatefulWidget {
             type State = StatefulState;
 
-            fn build(
-                &mut self,
-                env: &mut E,
-                constraint: crate::LayoutConstraint,
-                ctx: &mut LayoutCtx,
-            ) -> Self::State {
-                let mut state: $state = $init;
-                let mut widget = build(&mut state);
-
-                let mut env = (&mut state, env);
-                let widget_state = widget.build(&mut env, constraint, ctx);
-
-                let min_size = widget.min_size(&widget_state);
-                let extra_layers = widget.extra_layers(&widget_state);
-
-                drop(widget);
-
-                StatefulState {
-                    state,
-                    widget_state,
-
-                    min_size,
-                    extra_layers,
-                }
-            }
-
-            fn update(
+            fn layout(
                 &mut self,
                 state: &mut Self::State,
                 env: &mut E,
@@ -58,18 +51,10 @@ macro_rules! stateful_widget {
                 ctx: &mut LayoutCtx,
             ) {
                 let mut widget = build(&mut state.state);
-                widget.update(&mut state.widget_state, &mut (&mut state.state, env), constraint, ctx);
+                widget.layout(&mut state.widget_state, &mut (&mut state.state, env), constraint, ctx);
 
-                state.min_size = widget.min_size(&state.widget_state);
-                state.extra_layers = widget.extra_layers(&state.widget_state);
-            }
-
-            fn min_size(&self, state: &Self::State) -> druid_shell::kurbo::Size {
-                state.min_size
-            }
-
-            fn extra_layers(&self, state: &Self::State) -> u8 {
-                state.extra_layers
+                state.min_size = state.widget_state.min_size();
+                state.extra_layers = state.widget_state.extra_layers();
             }
 
             fn render(

@@ -22,6 +22,8 @@ impl<E, C: FlexContent<E>, I: Iterator<Item = C> + Clone> FlexContent<E> for Ite
         state: &mut Self::State,
         handler: &mut H,
     ) {
+        state.state.reserve(self.iter.size_hint().0.saturating_sub(state.state.len()));
+
         for (i, mut item) in self.iter.clone().enumerate() {
             let item_state = if let Some(s) = state.state.get_mut(i) {
                 s
