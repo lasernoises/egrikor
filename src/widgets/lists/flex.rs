@@ -12,7 +12,9 @@ macro_rules! flex {
         $primary_size:ident,
         $secondary_size:ident
     ) => {
-        pub fn $function<E, C: FlexContent<E>>(content: C) -> impl Widget<E, State = $state_struct<C::State>> {
+        pub fn $function<E, C: FlexContent<E>>(
+            content: C,
+        ) -> impl Widget<E, State = $state_struct<C::State>> {
             $struct { content }
         }
 
@@ -64,16 +66,16 @@ macro_rules! flex {
                 constraint: LayoutConstraint,
                 ctx: &mut LayoutCtx,
             ) {
-                struct MeasureHandler<'a, 'b, E> {
+                struct MeasureHandler<'a, 'b, 't, E> {
                     env: &'a mut E,
                     constraint: &'a LayoutConstraint,
-                    ctx: &'a mut LayoutCtx<'b>,
+                    ctx: &'a mut LayoutCtx<'b, 't>,
                     size: Size,
                     expand_count: u32,
                     extra_layers: u8,
                 }
 
-                impl<'a, 'b, E> FlexContentHandler<E> for MeasureHandler<'a, 'b, E> {
+                impl<'a, 'b, 't, E> FlexContentHandler<E> for MeasureHandler<'a, 'b, 't, E> {
                     fn widget<W: Widget<E>>(
                         &mut self,
                         widget: &mut W,
@@ -83,14 +85,20 @@ macro_rules! flex {
                         if expand {
                             self.expand_count += 1;
                         } else {
-                            widget.layout(state, self.env, LayoutConstraint {
-                                $primary_axis: None,
-                                $secondary_axis: self.constraint.$secondary_axis,
-                            }, self.ctx);
+                            widget.layout(
+                                state,
+                                self.env,
+                                LayoutConstraint {
+                                    $primary_axis: None,
+                                    $secondary_axis: self.constraint.$secondary_axis,
+                                },
+                                self.ctx,
+                            );
 
                             let min_size = state.min_size();
                             self.size.$primary_size += min_size.$primary_size;
-                            self.size.$secondary_size = self.size.$secondary_size.max(min_size.$secondary_size);
+                            self.size.$secondary_size =
+                                self.size.$secondary_size.max(min_size.$secondary_size);
 
                             self.extra_layers = self.extra_layers.max(state.extra_layers());
                         }
@@ -115,15 +123,15 @@ macro_rules! flex {
                 let min_length = first_pass_size.$primary_size;
                 state.no_expand_size = min_length;
 
-                struct MeasureExpandHandler<'a, 'b, E> {
+                struct MeasureExpandHandler<'a, 'b, 't, E> {
                     env: &'a mut E,
                     constraint: &'a LayoutConstraint,
-                    ctx: &'a mut LayoutCtx<'b>,
+                    ctx: &'a mut LayoutCtx<'b, 't>,
                     size: Size,
                     extra_layers: u8,
                 }
 
-                impl<'a, 'b, E> FlexContentHandler<E> for MeasureExpandHandler<'a, 'b, E> {
+                impl<'a, 'b, 't, E> FlexContentHandler<E> for MeasureExpandHandler<'a, 'b, 't, E> {
                     fn widget<W: Widget<E>>(
                         &mut self,
                         widget: &mut W,
@@ -136,7 +144,8 @@ macro_rules! flex {
                             let min_size = state.min_size();
 
                             self.size.$primary_size += min_size.$primary_size;
-                            self.size.$secondary_size = self.size.$secondary_size.max(min_size.$secondary_size);
+                            self.size.$secondary_size =
+                                self.size.$secondary_size.max(min_size.$secondary_size);
                             self.extra_layers = self.extra_layers.max(state.extra_layers());
                         }
                     }
@@ -145,7 +154,9 @@ macro_rules! flex {
                 let mut handler = MeasureExpandHandler {
                     env,
                     constraint: &LayoutConstraint {
-                        $primary_axis: constraint.$primary_axis.map(|w| (w - min_length) / state.expand_count as f64),
+                        $primary_axis: constraint
+                            .$primary_axis
+                            .map(|w| (w - min_length) / state.expand_count as f64),
                         $secondary_axis: constraint.$secondary_axis,
                     },
                     ctx,
@@ -156,10 +167,12 @@ macro_rules! flex {
                 self.content.all(&mut state.content_state, &mut handler);
 
                 state.size = Size {
-                    $primary_size: constraint.$primary_axis
+                    $primary_size: constraint
+                        .$primary_axis
                         .map(|w| w.max(handler.size.$primary_size))
                         .unwrap_or(handler.size.$primary_size),
-                    $secondary_size: constraint.$primary_axis
+                    $secondary_size: constraint
+                        .$primary_axis
                         .map(|w| w.max(handler.size.$secondary_size))
                         .unwrap_or(handler.size.$secondary_size),
                 };
@@ -181,7 +194,7 @@ macro_rules! flex {
                 let extra_length = rect.$primary_size() - min_length;
                 let expand_length = extra_length / state.expand_count as f64;
 
-                struct RenderHandler<'a, 'b, 'c, E> {
+                struct RenderHandler<'a, 'b, 'c, 't, 'is, E> {
                     env: &'a mut E,
                     expand_length: f64,
                     layer: u8,
@@ -189,11 +202,13 @@ macro_rules! flex {
                     pos: Point,
                     size: Size,
                     focus: Option<u16>,
-                    ctx: &'a mut RenderCtx<'b, 'c>,
+                    ctx: &'a mut RenderCtx<'b, 'c, 't, 'is>,
                     i: u16,
                 }
 
-                impl<'a, 'b, 'c, E> FlexContentHandler<E> for RenderHandler<'a, 'b, 'c, E> {
+                impl<'a, 'b, 'c, 't, 'is, E> FlexContentHandler<E>
+                    for RenderHandler<'a, 'b, 'c, 't, 'is, E>
+                {
                     fn widget<W: Widget<E>>(
                         &mut self,
                         widget: &mut W,
@@ -218,10 +233,13 @@ macro_rules! flex {
                             widget.render(
                                 state,
                                 self.env,
-                                Rect::from_origin_size(self.pos, Size {
-                                    $primary_size: widget_length,
-                                    $secondary_size: self.size.$secondary_size,
-                                }),
+                                Rect::from_origin_size(
+                                    self.pos,
+                                    Size {
+                                        $primary_size: widget_length,
+                                        $secondary_size: self.size.$secondary_size,
+                                    },
+                                ),
                                 self.layer,
                                 self.focus == Some(self.i),
                                 &mut RenderCtx {
@@ -304,10 +322,13 @@ macro_rules! flex {
                             let ret = widget.handle_cursor_input(
                                 state,
                                 self.env,
-                                Rect::from_origin_size(self.pos, Size {
-                                    $primary_size: widget_length,
-                                    $secondary_size: self.size.$secondary_size,
-                                }),
+                                Rect::from_origin_size(
+                                    self.pos,
+                                    Size {
+                                        $primary_size: widget_length,
+                                        $secondary_size: self.size.$secondary_size,
+                                    },
+                                ),
                                 self.cursor_pos,
                                 self.cursor_layer,
                                 self.input,
@@ -390,10 +411,13 @@ macro_rules! flex {
                             widget.handle_keyboard_input(
                                 state,
                                 self.env,
-                                Rect::from_origin_size(self.pos, Size {
-                                    $primary_size: widget_length,
-                                    $secondary_size: self.size.$secondary_size,
-                                }),
+                                Rect::from_origin_size(
+                                    self.pos,
+                                    Size {
+                                        $primary_size: widget_length,
+                                        $secondary_size: self.size.$secondary_size,
+                                    },
+                                ),
                                 self.input,
                                 self.input_state,
                                 self.theme,

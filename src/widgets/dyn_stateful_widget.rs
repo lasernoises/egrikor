@@ -156,10 +156,10 @@ impl<E, S: Default, B: Fn(StatefulWidgetHandler<E, S>)> Widget<E> for StatefulWi
     }
 }
 
-pub struct StatefulWidgetHandler<'e, 's, 'c, 'ca, 'cb, 'r, E, S> {
+pub struct StatefulWidgetHandler<'e, 's, 'c, 'ca, 'cb, 'r, 't, 'is, E, S> {
     env: &'e mut E,
     state: &'s mut StatefulWidgetState<S>,
-    handler: BuiltStatefulWidgetHandler<'c, 'ca, 'cb, 'r>,
+    handler: BuiltStatefulWidgetHandler<'c, 'ca, 'cb, 'r, 't, 'is>,
 }
 
 struct BuildResult {
@@ -168,16 +168,16 @@ struct BuildResult {
     extra_layers: u8,
 }
 
-enum BuiltStatefulWidgetHandler<'c, 'ca, 'cb, 'r> {
+enum BuiltStatefulWidgetHandler<'c, 'ca, 'cb, 'r, 't, 'is> {
     Update {
         constraint: LayoutConstraint,
-        ctx: &'c mut LayoutCtx<'ca>,
+        ctx: &'c mut LayoutCtx<'ca, 't>,
     },
     Render {
         rect: Rect,
         layer: u8,
         focus: bool,
-        ctx: &'c mut RenderCtx<'ca, 'cb>,
+        ctx: &'c mut RenderCtx<'ca, 'cb, 't, 'is>,
     },
     TestInputPosLayer {
         rect: Rect,
@@ -203,7 +203,9 @@ enum BuiltStatefulWidgetHandler<'c, 'ca, 'cb, 'r> {
     },
 }
 
-impl<'e, 's, 'c, 'ca, 'cb, 'r, E, S> StatefulWidgetHandler<'e, 's, 'c, 'ca, 'cb, 'r, E, S> {
+impl<'e, 's, 'c, 'ca, 'cb, 'r, 't, 'is, E, S>
+    StatefulWidgetHandler<'e, 's, 'c, 'ca, 'cb, 'r, 't, 'is, E, S>
+{
     pub fn state(&self) -> &S {
         &self.state.state
     }

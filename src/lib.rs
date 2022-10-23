@@ -9,6 +9,7 @@ use druid_shell::{
 use piet_common::{Color, Piet, RenderContext, PietText};
 use widgets::{RectTheme, TextTheme, Theme, WidgetTheme, WidgetVariants};
 
+pub mod pass_widget;
 pub mod text;
 pub mod theme;
 pub mod widgets;
@@ -94,16 +95,16 @@ impl LayoutConstraint {
 }
 
 #[non_exhaustive]
-pub struct LayoutCtx<'a> {
+pub struct LayoutCtx<'a, 't> {
     pub text: &'a mut PietText,
-    pub theme: &'a Theme,
+    pub theme: &'t Theme,
 }
 
 #[non_exhaustive]
-pub struct RenderCtx<'a, 'b> {
+pub struct RenderCtx<'a, 'b, 't, 'is> {
     pub piet: &'a mut Piet<'b>,
-    pub theme: &'a Theme,
-    pub input_state: &'a InputState,
+    pub theme: &'t Theme,
+    pub input_state: &'is InputState,
 }
 
 pub trait WidgetState {
