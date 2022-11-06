@@ -40,104 +40,21 @@ macro_rules! stateful_widget {
 
         struct StatefulWidget;
 
-        impl<E> crate::Widget<E> for StatefulWidget {
+        impl<E> $crate::pass_widget::PassWidget<E> for StatefulWidget {
             type State = StatefulState;
 
-            fn layout(
-                &mut self,
-                state: &mut Self::State,
-                env: &mut E,
-                constraint: crate::LayoutConstraint,
-                ctx: &mut LayoutCtx,
-            ) {
-                let mut widget = build(&mut state.state);
-                widget.layout(&mut state.widget_state, &mut (&mut state.state, env), constraint, ctx);
+            fn pass<R>(&mut self, state: &mut Self::State, env: &mut E, pass: $crate::pass_widget::Pass<R>) -> R {
+                let mut widget = $crate::pass_widget::WidgetPassWidget(build(&mut state.state));
+
+                let result = widget.pass(&mut state.widget_state, &mut (&mut state.state, env), pass);
 
                 state.min_size = state.widget_state.min_size();
                 state.extra_layers = state.widget_state.extra_layers();
-            }
 
-            fn render(
-                &mut self,
-                state: &mut Self::State,
-                env: &mut E,
-                rect: druid_shell::kurbo::Rect,
-                layer: u8,
-                focus: bool,
-                ctx: &mut RenderCtx,
-            ) {
-                let mut widget = build(&mut state.state);
-                widget.render(
-                    &mut state.widget_state,
-                    &mut (&mut state.state, env),
-                    rect,
-                    layer,
-                    focus,
-                    ctx,
-                );
-            }
-
-            fn test_input_pos_layer(
-                &mut self,
-                state: &mut Self::State,
-                env: &mut E,
-                rect: druid_shell::kurbo::Rect,
-                input_pos: druid_shell::kurbo::Point,
-            ) -> Option<u8> {
-                let mut widget = build(&mut state.state);
-                widget.test_input_pos_layer(&mut state.widget_state, &mut (&mut state.state, env), rect, input_pos)
-            }
-
-            fn handle_cursor_input(
-                &mut self,
-                state: &mut Self::State,
-                env: &mut E,
-                rect: druid_shell::kurbo::Rect,
-                cursor_pos: druid_shell::kurbo::Point,
-                cursor_layer: u8,
-                input: crate::CursorInput,
-                input_state: &crate::InputState,
-                theme: &crate::theme::Theme,
-                focus: bool,
-            ) -> crate::InputReturn {
-                let mut widget = build(&mut state.state);
-
-                widget.handle_cursor_input(
-                    &mut state.widget_state,
-                    &mut (&mut state.state, env),
-                    rect,
-                    cursor_pos,
-                    cursor_layer,
-                    input,
-                    input_state,
-                    theme,
-                    focus,
-                )
-            }
-
-            fn handle_keyboard_input(
-                &mut self,
-                state: &mut Self::State,
-                env: &mut E,
-                rect: druid_shell::kurbo::Rect,
-                input: &crate::KeyboardInput,
-                input_state: &crate::InputState,
-                theme: &crate::theme::Theme,
-                focus: bool,
-            ) {
-                let mut widget = build(&mut state.state);
-                widget.handle_keyboard_input(
-                    &mut state.widget_state,
-                    &mut (&mut state.state, env),
-                    rect,
-                    input,
-                    input_state,
-                    theme,
-                    focus,
-                );
+                result
             }
         }
 
-        StatefulWidget
+        $crate::pass_widget::PassWidgetWidget(StatefulWidget)
     }};
 }
