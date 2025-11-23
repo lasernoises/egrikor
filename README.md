@@ -120,3 +120,15 @@ This is a bit unfortunate because fundamentally our design doesn't require all t
 at the same time. But designing an API such that only ever one child widget exists at the same time
 and is somewhat nice to use is a bit of a challenge. I also experimented with things that are more
 like the one-way-data-flow idea and work around returning events.
+
+## Related Work
+
+If you're here because you're a collector of GUI library design approaches like me let me help you
+out with a few links to libraries I find interesting in no particular order. 
+
+- [xilem](https://github.com/linebender/xilem/)
+- [rui](https://github.com/audulus/rui)
+- [kas](https://github.com/kas-gui/kas)
+
+Of course also check out [areweguiyet.com](https://areweguiyet.com/) if you don't know about that
+yet.
