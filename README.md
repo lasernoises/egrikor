@@ -92,3 +92,31 @@ fn my_widget<S, W: Widget<State = S>>(inner: W) -> impl Widget<State = impl Size
 ```
 
 Currently that is not allowed because all type parameters have to appear in the `use`.
+
+### State Management and Mutability
+
+The design fundamentally does make it possible to pass mutable references down the tree, as long as
+they don't get stored in any `State`. The trouble starts very quickly though if there's multiple
+children that need to access the same state.
+
+```rust
+// this works fine:
+fn my_widget<'a>(state: &'a mut State) -> impl Widget {
+    row(flex_content![
+        button("abc", || *state.a += 1),
+    ])
+}
+
+// but this causes trouble
+fn my_widget<'a>(state: &'a mut State) -> impl Widget {
+    row(flex_content![
+        button("abc", || *state.a += 1),
+        label(&state.a),
+    ])
+}
+```
+
+This is a bit unfortunate because fundamentally our design doesn't require all the widgets to exist
+at the same time. But designing an API such that only ever one child widget exists at the same time
+and is somewhat nice to use is a bit of a challenge. I also experimented with things that are more
+like the one-way-data-flow idea and work around returning events.
