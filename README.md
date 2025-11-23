@@ -45,3 +45,50 @@ gets passed in a simple constraint (the details vary) and returns a size. The di
 in my approach is that I treat the returned size as a min-size instead of a fixed one. That way we
 can do things like expand all the widgets in a row to the maximal height all the children of the row
 without needing to measure multiple times.
+
+## Problems
+
+Some interesting problems I ran into along the way:
+
+### Lifetimes in Closure Returns
+
+Unfortunately Rust doesn't really have a way to write anything like this:
+
+```rust
+fn abc(f: impl for<'a> Fn(&'a ()) -> impl Widget + 'a);
+```
+
+If there isn't a lifetime from the closure involved you can do something like this:
+
+```rust
+fn abc<W: Widget>(f: impl Fn() -> W);
+```
+
+The workaround for this was to instead pass some sort of thunk to the closure and then have the
+closure pass the widget to that. But that in turn usually requires that we dynamically allocate the
+state for the widget.
+
+### Impl Trait Returns
+
+```rust
+fn my_widget<W: Widget>(inner: W) -> impl Widget;
+```
+
+In this case the issue is that if `W` contains a lifetime, the returned widget also has that
+lifetime in its type now, which is correct. But the problem is that then the associated `State` type
+does as well. That's a problem because `State` is supposed to be `'static`, or at least it has to be
+able to outlive `W`.
+
+To work around this I enabled the unstable feature `type_alias_impl_trait` so we could say that the
+associated state type is an existential type. We could of course also try to always fully name the
+`State` type we return, but that would become very bothersome very quickly and would possibly run
+into trouble around closures.
+
+My hope is that in future versions of Rust we'll be able to do something like this:
+
+
+```rust
+fn my_widget<S, W: Widget<State = S>>(inner: W) -> impl Widget<State = impl Sized + use<S>>;
+```
+
+Currently that is not allowed because all type parameters have to appear in the `use`.
