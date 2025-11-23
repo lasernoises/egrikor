@@ -37,3 +37,11 @@ list of all the widget IDs it contains, both directly and indirectly. I've seen 
 for this, but I don't like that very much. I felt that instead simply not having global identifiers
 and designing around that would be more elegant. It does definitely come with a set of challenges
 however.
+
+### Layout
+
+The layout process loosley follows the flutter layout protocol. The main idea being that a widget
+gets passed in a simple constraint (the details vary) and returns a size. The difference to flutter
+in my approach is that I treat the returned size as a min-size instead of a fixed one. That way we
+can do things like expand all the widgets in a row to the maximal height all the children of the row
+without needing to measure multiple times.
