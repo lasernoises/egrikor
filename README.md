@@ -7,6 +7,9 @@ this topic hasn't gone anywhere however. One thing I have done in this time is I
 [fluorine](https://github.com/lasernoises/fluorine), a reactivity library. I've also been working on
 various other experiments, which aren't public as of writing this.
 
+I also made some [YouTube videos](https://www.youtube.com/@florianplattner2993/videos) back when I
+was working on this.
+
 ## Design
 
 The exact design changed a lot while I was working on this.
